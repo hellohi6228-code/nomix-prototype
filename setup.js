@@ -417,8 +417,7 @@
       back: 'track', wide: true,
       body: `<div class="head">${N.title('Your data dictionary')}<p class="lead">How each tool’s data lines up with Nomix. Every store uses the same fields. Tap a tag to see its fields.</p></div>
         ${k.length ? `<div class="dict">${k.map(mapTable).join('')}</div>` : '<p class="meta">No tags yet. Go back and write a prompt, or add a tag.</p>'}
-        ${N.ui.keepAdding ? N.keepPanel() : `<button type="button" class="adder" data-act="keep-add-open">${N.icon('plus')}Add a tag</button>`}
-        <p class="meta">Nomix also keeps everything else your tools send, so a new prompt can look back later.</p>`,
+        ${N.ui.keepAdding ? N.keepPanel() : `<button type="button" class="adder" data-act="keep-add-open">${N.icon('plus')}Add a tag</button>`}`,
       main: k.length ? { label: 'Looks right', act: 'go', id: 'ready' } : { label: 'Add at least one tag', disabled: true }
     };
   }

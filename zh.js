@@ -48,7 +48,6 @@
     'Worked out by Nomix': '由 Nomix 计算', 'Mapped with you': '与您一起对应', 'Comes from': '来源',
     'Added by you · mapped with you': '您添加的 · 与您一起对应', 'Add a field, like “Table number”': '添加字段,例如“桌号”',
     'Add a tag': '添加标签', 'Looks right': '没问题', 'Add at least one tag': '至少添加一个标签',
-    'Nomix also keeps everything else your tools send, so a new prompt can look back later.': 'Nomix 也会保存工具发来的其他所有数据,新的提示以后也能回看历史。',
     'No tags yet. Go back and write a prompt, or add a tag.': '还没有标签。返回写一条提示,或添加标签。',
     'No tool for this yet': '还没有工具提供这项数据', 'Waiting for the next one': '等待下一条数据',
     'You’re ready': '一切就绪', 'Nomix is set up.': 'Nomix 已设置好。',
