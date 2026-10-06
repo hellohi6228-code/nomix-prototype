@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nomix</title>
+<meta name="description" content="Connect your restaurant's tools. Nomix keeps the information organized.">
+<meta name="theme-color" content="#FAF8F3">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Figtree:wght@400..700&display=swap">
+<link rel="stylesheet" href="base.css">
+<link rel="stylesheet" href="screens.css">
+<style>
+  :root { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); color-scheme: light; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="field" aria-hidden="true"></div>
+<div id="app"></div>
+<div id="sheet-root"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script src="map.js"></script>
+<script src="core.js"></script>
+<script src="setup.js"></script>
+<script src="home.js"></script>
+<script src="flow.js"></script>
+</body>
+</html>
