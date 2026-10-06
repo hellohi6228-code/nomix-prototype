@@ -235,26 +235,52 @@ window.NOMIX_DATA = (function () {
 
   const BACKUP_WORDS = ['backup', 'back up', 'back-up', 'copy', 'copies', 'everything', 'all of it', 'all my data', '备份', '全部'];
 
-  // One client, several stores. Each sign-in returns the stores on that account.
-  const ACCOUNT = { name: 'Golden Lotus', stores: ['Main St', 'Harbor Ave', 'Lakeview', 'Sunset Blvd'] };
+  // NOMIX Hospitality Group: its brands and operating stores, as listed on the group's own site.
+  // Brands still opening or without a published address (Matcha Zen, Chilin, Viva Refresh) have no stores here yet.
+  // Each sign-in returns the stores that account can see. Store: [store id, location].
+  const COMPANY = {
+    name: 'NOMIX Hospitality Group',
+    brands: [
+      { id: 'umiya', name: 'Umiya', stores: [
+        ['umiya-houston-midtown', 'Houston Midtown'], ['umiya-houston-katy-fwy', 'Houston (Katy Fwy)'], ['umiya-humble', 'Humble'],
+        ['umiya-frisco', 'Frisco'], ['umiya-san-antonio-huebner', 'San Antonio (Huebner Oaks)'], ['umiya-san-antonio-live-oak', 'Live Oak'],
+        ['umiya-san-antonio-seaworld', 'San Antonio (SeaWorld)'], ['umiya-corpus-christi', 'Corpus Christi'], ['umiya-mcallen', 'McAllen'],
+        ['umiya-pharr', 'Pharr'], ['umiya-lubbock', 'Lubbock'], ['umiya-leander', 'Leander'], ['umiya-lic', 'Long Island City'],
+        ['umiya-edison', 'Edison'], ['umiya-las-vegas', 'Las Vegas'], ['umiya-alexandria', 'Alexandria'], ['umiya-memphis', 'Memphis'],
+        ['umiya-jensen-beach', 'Jensen Beach']] },
+      { id: 'surfing-crab', name: 'Surfing Crab', stores: [
+        ['surfing-crab-cc-spid', 'Corpus Christi (SPID)'], ['surfing-crab-cc-staples', 'Corpus Christi (S Staples)'],
+        ['surfing-crab-cc-calallen', 'Corpus Christi (Calallen)'], ['surfing-crab-portland', 'Portland (Express)'],
+        ['surfing-crab-san-antonio', 'San Antonio (I-10 W)'], ['surfing-crab-round-rock', 'Round Rock'], ['surfing-crab-san-marcos', 'San Marcos'],
+        ['surfing-crab-laredo', 'Laredo'], ['surfing-crab-brownsville', 'Brownsville'], ['surfing-crab-mcallen', 'McAllen (Nolana)'],
+        ['surfing-crab-victoria', 'Victoria (Express)'], ['surfing-crab-escondido', 'Escondido'], ['surfing-crab-lewes', 'Lewes']] },
+      { id: 'hibachi-buffet', name: 'Hibachi Grill & Supreme Buffet', stores: [['hibachi-buffet-corpus', 'Corpus Christi']] }
+    ]
+  };
 
   const DISHES = [
-    ['Dan Dan Noodles', 13.5, 'Noodles'], ['Mapo Tofu', 14, 'Mains'], ['Pork Dumplings', 11, 'Dumplings'],
-    ['Scallion Pancake', 8.5, 'Small plates'], ['Kung Pao Chicken', 16.5, 'Mains'], ['Beef Chow Fun', 17, 'Noodles'],
-    ['Xiao Long Bao', 12.5, 'Dumplings'], ['Jasmine Milk Tea', 5.75, 'Drinks'], ['Salt and Pepper Wings', 13, 'Small plates'],
-    ['Garlic Bok Choy', 9.5, 'Vegetables'], ['Hot and Sour Soup', 7, 'Soups'], ['Fried Rice', 12, 'Rice']
+    ['Lobster King Roll', 18, 'Rolls'], ['Amazing Tuna Roll', 15, 'Rolls'], ['A5 Wagyu Sando', 28, 'Robata'],
+    ['Cheese Baked Lobster', 24, 'Hot kitchen'], ['Toro & Uni Nigiri', 22, 'Nigiri'], ['AYCE Dinner', 38.99, 'All you can eat']
   ];
-  const OPTIONS = ['Extra spicy', 'No scallions', 'Add egg', 'Less sugar', 'None'];
+  // What each brand sells: its signature dishes.
+  const MENUS = {
+    umiya: DISHES,
+    'surfing-crab': [['King Crab Leg Combo', 64.99, 'Combos'], ['Snow Crab Leg Combo', 39.99, 'Combos'], ['Surfing Special Boil', 49.99, 'Boils'],
+      ['Surfing Crab Loaded Fries', 12.99, 'Sides'], ['Fried Jumbo Shrimp Basket', 16.99, 'Baskets']],
+    'hibachi-buffet': [['Adult Dinner Buffet', 24.99, 'Buffet'], ['Hibachi Steak Fried Rice', 15.99, 'Hibachi'], ['Spicy Tuna Roll', 8.99, 'Sushi'],
+      ["General Tso's Chicken", 13.99, 'Kitchen'], ['Crab Rangoon', 6.99, 'Appetizers'], ['House Special Lo Mein', 12.99, 'Kitchen']]
+  };
+  const OPTIONS = ['Extra spicy', 'Garlic butter', 'Cajun', 'No mayo', 'None'];
   const REASONS = ['Wrong item', 'Long wait', 'Item sold out', 'Guest changed their mind'];
   const MANAGERS = ['Lily C.', 'Marcus T.', 'Priya S.'];
   const STAFF = [['Maria L.', 'Line cook'], ['Kevin Z.', 'Server'], ['Ana P.', 'Pickup counter'], ['Jun W.', 'Wok station'], ['Dee R.', 'Dish'], ['Tomás G.', 'Prep']];
-  const STATIONS = ['Wok', 'Fryer', 'Dumpling', 'Noodle'];
+  const STATIONS = ['Sushi bar', 'Robata grill', 'Teppan', 'Boil station', 'Fryer'];
   const FRIDGES = [['Walk-in fridge', 34, 39, '33–40°F'], ['Prep fridge', 35, 40, '33–41°F'], ['Freezer', -4, 2, 'Below 5°F']];
-  const STOCK = [['Bok choy', 'cases', 'Pacific Produce'], ['Pork shoulder', 'lb', 'Valley Meats'], ['Jasmine rice', 'bags', 'Golden Grain'], ['Takeout boxes', 'cases', 'PackRight'], ['Soy sauce', 'gallons', 'Golden Grain']];
+  const STOCK = [['Salmon', 'lb', 'Coastal Seafood'], ['Snow crab clusters', 'lb', 'Coastal Seafood'], ['Crawfish', 'lb', 'Gulf Catch'], ['Sushi rice', 'bags', 'Golden Grain'], ['Takeout boxes', 'cases', 'PackRight']];
   const DEALS = ['Lunch set for one', 'Dinner for two', 'Dumpling combo', 'Family set for four'];
   const PROMOS = ['Happy hour', 'Lunch combo', '10% off pickup', 'Staff meal', 'Loyalty reward'];
-  const COMMENTS = [[5, 'Hot and fresh, great noodles'], [4, 'Good, a little late'], [5, 'Dumplings were perfect'], [2, 'Missing the soup'], [3, 'Food was cold'], [5, 'Fast and friendly']];
-  const RECIPES = [['Dan Dan Noodles', 'Wheat noodles', '6 oz', 0.62], ['Mapo Tofu', 'Silken tofu', '8 oz', 0.95], ['Kung Pao Chicken', 'Chicken thigh', '6 oz', 1.84], ['Pork Dumplings', 'Ground pork', '4 oz', 1.1], ['Beef Chow Fun', 'Flank steak', '5 oz', 2.4]];
+  const COMMENTS = [[5, 'Fresh sushi, great value'], [4, 'Good, a little late'], [5, 'Crab legs were perfect'], [2, 'Missing the corn'], [3, 'Food was cold'], [5, 'Fast and friendly']];
+  const RECIPES = [['Lobster King Roll', 'Lobster meat', '3 oz', 4.2], ['King Crab Leg Combo', 'King crab legs', '1 lb', 18.5], ['Spicy Tuna Roll', 'Tuna', '2 oz', 1.6], ['Surfing Special Boil', 'Crawfish', '1 lb', 4.8], ['Hibachi Steak Fried Rice', 'Sirloin', '5 oz', 2.9]];
   const WASTE_REASONS = ['Expired', 'Dropped', 'Overcooked', 'Made too much'];
 
   const PROVIDERS = ['Snowflake', 'BigQuery', 'Databricks', 'Amazon S3', 'Azure', 'Other'];
@@ -262,6 +288,6 @@ window.NOMIX_DATA = (function () {
   // Each vendor's own icon, from its app store listing or website (in logos/).
   const LOGOS = { "2dfire": '2dfire.jpg', "7shifts": '7shifts.jpg', acewill: 'acewill.jpg', aloha: 'aloha.png', brink: 'brink.png', chowbus: 'chowbus.png', chownow: 'chownow.png', clover: 'clover.png', deliverect: 'deliverect.png', doordash: 'doordash.jpg', douyin: 'douyin.jpg', eleme: 'eleme.png', grubhub: 'grubhub.png', keruyun: 'keruyun.png', lightspeed: 'lightspeed.png', "meituan-pos": 'meituan-pos.jpg', "meituan-waimai": 'meituan-waimai.jpg', menusifu: 'menusifu.png', olo: 'olo.png', r365: 'r365.png', revel: 'revel.png', simphony: 'simphony.svg', spoton: 'spoton.jpg', square: 'square.jpg', tcsl: 'tcsl.png', toast: 'toast.jpg', touchbistro: 'touchbistro.png', ubereats: 'ubereats.png', wechat: 'wechat.jpg', yinbao: 'yinbao.jpg' };
 
-  return { GROUPS, KINDS, CUSTOM_KINDS, TOOLS, STREAMS, CATS, TAG_GROUPS, FIELD_WORDS, QUESTIONS, BACKUP_WORDS, ACCOUNT,
-    DISHES, OPTIONS, REASONS, MANAGERS, STAFF, STATIONS, FRIDGES, STOCK, DEALS, PROMOS, COMMENTS, RECIPES, WASTE_REASONS, PROVIDERS, LOGOS };
+  return { GROUPS, KINDS, CUSTOM_KINDS, TOOLS, STREAMS, CATS, TAG_GROUPS, FIELD_WORDS, QUESTIONS, BACKUP_WORDS, COMPANY,
+    DISHES, MENUS, OPTIONS, REASONS, MANAGERS, STAFF, STATIONS, FRIDGES, STOCK, DEALS, PROMOS, COMMENTS, RECIPES, WASTE_REASONS, PROVIDERS, LOGOS };
 })();

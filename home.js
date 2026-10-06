@@ -3,27 +3,37 @@
   'use strict';
   const N = window.Nomix, D = window.NOMIX_DATA, esc = N.esc;
   const chev = () => N.icon('chev', 'chev');
-  const inView = (id, store) => store === 'all' || N.status(id) !== 'connected' || N.storesOf(id).includes(store);
+  const inView = (id, store) => store === 'all' || N.status(id) !== 'connected' || N.storesOf(id).some(s => N.inView(s, store));
   const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
   /* ---------- Header and store switcher ---------- */
-  function storeBar(store) {
+  // All stores, one brand, or one store: brands first, then the chosen brand's stores.
+  function storeBar(view) {
     const stores = N.allStores();
     if (stores.length < 2) return '';
-    const chip = (id, label, k) => `<button type="button" class="chip" id="st-${k}" data-act="store" data-id="${esc(id)}" aria-pressed="${store === id}">${esc(label)}</button>`;
-    return `<div class="storebar" role="group" aria-label="Choose a store">${chip('all', `All ${stores.length} stores`, 'all')}${stores.map((s, k) => chip(s, s, k)).join('')}</div>`;
+    const chip = (id, label, key, on, cls) => `<button type="button" class="chip${cls ? ' ' + cls : ''}" id="st-${esc(key)}" data-act="store" data-id="${esc(id)}" aria-pressed="${on}">${esc(label)}</button>`;
+    const open = view === 'all' ? null : view.startsWith('brand:') ? view.slice(6) : N.brandOf(view);
+    const brands = N.brands().filter(b => stores.some(s => N.brandOf(s) === b.id)).map(b => {
+      const n = stores.filter(s => N.brandOf(s) === b.id).length;
+      return chip('brand:' + b.id, `${b.name} · ${n}`, 'b-' + b.id, open === b.id, 'brand');
+    }).join('');
+    const mine = open ? stores.filter(s => N.brandOf(s) === open) : [];
+    return `<div class="storebar" role="group" aria-label="Choose a brand or store">
+      <div class="sb-row">${chip('all', `All ${stores.length} stores`, 'all', view === 'all')}${brands}</div>
+      ${mine.length > 1 ? `<div class="sb-row sb-stores">${mine.map(s => chip(s, N.storeLoc(s), s, view === s)).join('')}</div>` : ''}
+    </div>`;
   }
   function header(store) {
     const sel = N.S.selected, c = N.connected().filter(id => inView(id, store));
     const later = sel.filter(id => N.status(id) === 'later').length, help = sel.filter(id => N.status(id) === 'help').length;
     const parts = [];
-    if (c.length) parts.push(`${count(c.length, 'tool', 'tools')} working${store === 'all' ? '' : ` at ${store}`}`);
+    if (c.length) parts.push(`${count(c.length, 'tool', 'tools')} working${store === 'all' ? '' : ` at ${N.viewName(store)}`}`);
     if (later) parts.push(`${later} waiting for you`);
     if (help) parts.push(`${help} being set up with you`);
     return `<header class="home-top">
       <div class="ht-brand">${N.logo()}${N.langLink()}</div>
       <div>
-        <h1 id="home-title" tabindex="-1" data-focus>${esc(N.connected().length ? D.ACCOUNT.name : 'Your restaurant')}</h1>
+        <h1 id="home-title" tabindex="-1" data-focus>${esc(N.connected().length ? D.COMPANY.name : 'Your company')}</h1>
         <p class="summary"><span class="dot ${c.length ? 'ok' : help ? 'help' : ''}"></span>${esc(parts.length ? parts.join(' · ') : 'No tools connected yet')}</p>
       </div>
       ${storeBar(store)}
@@ -100,7 +110,7 @@
   function toolActions(id, t, st) {
     if (N.ui.disconnect === id) {
       const stores = N.storesOf(id);
-      return `<div class="confirm edit-only"><p>Disconnect ${esc(t.name)}? Nomix stops receiving from it${stores.length ? ` at ${esc(N.list(stores))}` : ''}. What it already sent stays, and History can bring this setup back.</p>
+      return `<div class="confirm edit-only"><p>Disconnect ${esc(t.name)}? Nomix stops receiving from it${stores.length ? ` at ${esc(N.storeList(stores))}` : ''}. What it already sent stays, and History can bring this setup back.</p>
         <div class="row"><button type="button" class="btn-soft danger" id="dc-yes" data-act="disconnect" data-id="${esc(id)}">Disconnect ${esc(t.name)}</button>
         <button type="button" class="btn-quiet" data-act="disconnect-cancel" data-id="${esc(id)}">Cancel</button></div></div>`;
     }
@@ -118,9 +128,9 @@
     const ask = `What should Nomix receive from ${esc(t.name)}?`;
     let body;
     if (st === 'connected') {
-      const feed = (r.feed || []).filter(e => store === 'all' || e.store === store).slice(0, 4);
+      const feed = (r.feed || []).filter(e => N.inView(e.store, store)).slice(0, 4);
       body = `<div class="blk"><h3>Nomix is receiving:</h3>${streams(false)}${streamAdder(id, t)}</div>
-        <div class="blk"><h3>Most recent${store === 'all' ? '' : ` at ${esc(store)}`}</h3><ul class="feed" data-feed="${esc(id)}">${feed.map(ev => N.feedItem(ev)).join('')}</ul></div>
+        <div class="blk"><h3>Most recent${store === 'all' ? '' : ` at ${esc(N.viewName(store))}`}</h3><ul class="feed" data-feed="${esc(id)}">${feed.map(ev => N.feedItem(ev)).join('')}</ul></div>
         <p class="meta">Connected ${esc(N.when(r.at))}</p>`;
     } else if (st === 'help') {
       body = `<div class="blk"><p>Someone from Nomix will reach out to finish connecting ${esc(t.name)}.</p>
@@ -142,7 +152,7 @@
       <button type="button" class="tc-head" id="head-${esc(key)}" data-act="toggle-open" data-key="${esc(key)}" aria-expanded="${open}" aria-controls="body-${esc(id)}">
         ${N.mono(t)}
         <span class="tc-text"><span class="tc-name">${esc(N.toolName(t))}</span>
-          <span class="tc-what">${esc(N.toolWhat(t))}${stores.length ? ` · ${esc(N.list(stores))}` : ''}</span>
+          <span class="tc-what">${esc(N.toolWhat(t))}${stores.length ? ` · ${esc(N.storeList(stores))}` : ''}</span>
           <span class="status">${status}</span></span>
         ${chev()}
       </button>
@@ -165,7 +175,7 @@
     if (!rows.length) return `<p class="meta fh-empty">${esc(N.waitingText(cat, store))}</p>`;
     return `<div class="fh-scroll"><table class="fh">
       <thead><tr><th scope="col">When</th><th scope="col">Store</th><th scope="col">From</th><th scope="col">Value</th></tr></thead>
-      <tbody>${rows.map(e => `<tr><td data-ts="${e.ts}">${N.rel(e.ts)}</td><td>${esc(e.store)}</td><td>${esc(N.tool(e.tool).name)}</td><td class="fh-v">${esc(e.v)}</td></tr>`).join('')}</tbody>
+      <tbody>${rows.map(e => `<tr><td data-ts="${e.ts}">${N.rel(e.ts)}</td><td>${esc(N.storeName(e.store))}</td><td>${esc(N.tool(e.tool).name)}</td><td class="fh-v">${esc(e.v)}</td></tr>`).join('')}</tbody>
     </table></div>`;
   }
   // Keep an open field's history current as new values arrive.
@@ -254,7 +264,7 @@
   N.onEvent = (id, ev) => {
     if (N.S.phase !== 'home' || N.viewing) return;
     const store = N.viewStore();
-    if (store !== 'all' && ev.store !== store) return;
+    if (!N.inView(ev.store, store)) return;
     document.querySelectorAll(`[data-last="${id}"]`).forEach(el => { el.dataset.ts = ev.ts; });
     const ul = document.querySelector(`[data-feed="${id}"]`);
     if (ul) {

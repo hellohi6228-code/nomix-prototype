@@ -232,15 +232,19 @@
       const found = f.found || [], n = (f.stores || []).length, edit = f.mode === 'stores';
       const count = n === 1 ? '1 store' : n + ' stores';
       h = edit ? `Choose stores for ${name}` : 'Choose your stores';
-      lead = edit ? `Nomix keeps ${name} data from the stores you choose.` : `We found ${found.length} ${D.ACCOUNT.name} stores on ${name}.`;
-      extra = `<div class="locs" role="group" aria-label="Stores">${found.map(s =>
-        `<label class="loc"><input type="checkbox" data-change="store" value="${esc(s)}"${(f.stores || []).includes(s) ? ' checked' : ''}><span><span class="name">${esc(D.ACCOUNT.name)}</span> <span class="what">· ${esc(s)}</span></span></label>`).join('')}</div>`;
+      lead = edit ? `Nomix keeps ${name} data from the stores you choose.` : `We found ${found.length} ${found.length === 1 ? 'store' : 'stores'} on ${name}.`;
+      // Stores grouped under their brand.
+      extra = N.brands().map(b => {
+        const mine = found.filter(s => N.brandOf(s) === b.id);
+        return mine.length ? `<div class="locs" role="group" aria-label="${esc(b.name)}"><span class="lbl">${esc(b.name)}</span>${mine.map(s =>
+          `<label class="loc"><input type="checkbox" data-change="store" value="${esc(s)}"${(f.stores || []).includes(s) ? ' checked' : ''}><span class="name">${esc(N.storeLoc(s))}</span></label>`).join('')}</div>` : '';
+      }).join('');
       main = n ? { label: edit ? `Save ${count}` : `Connect ${count}`, act: 'flow-connect' } : { label: 'Choose a store', disabled: true };
       sec = edit ? { label: 'Cancel', act: 'sheet-close' } : { label: 'Do this later', act: 'flow-later' };
     } else if (f.phase === 'done') {
       const r = N.S.tools[id];
       state = 'live'; h = `${name} ${t.plural ? 'are' : 'is'} connected`;
-      lead = `${D.ACCOUNT.name} · ${N.list(r.stores)}`;
+      lead = N.storeList(r.stores);
       main = { label: nextStep(f), act: 'flow-next' };
     } else if (f.phase === 'helped') {
       state = 'help'; h = 'Help is on the way';
@@ -283,7 +287,7 @@
   function connect(id, stores) {
     N.S.tools[id] = { status: 'connected', at: Date.now(), stores: stores.slice() };
     N.seedFeed(id);
-    N.commit(`Connected ${N.tool(id).name} · ${N.list(stores)}`);
+    N.commit(`Connected ${N.tool(id).name} · ${N.storeList(stores)}`);
     settle('done');
   }
   N.clearWait = () => { clearTimeout(waitTimer); clearTimeout(moveTimer); };
@@ -324,7 +328,7 @@
       // Changing which stores a connected tool covers
       N.S.tools[id].stores = f.stores.slice();
       N.S.flow = null;
-      N.commit(`${N.tool(id).name} now covers ${N.list(f.stores)}`);
+      N.commit(`${N.tool(id).name} now covers ${N.storeList(f.stores)}`);
       N.save(); N.render({ refocus: 'head-tool:' + id, keepScroll: true });
       N.toast(`${N.tool(id).name} now covers ${f.stores.length === 1 ? '1 store' : f.stores.length + ' stores'}`);
     },

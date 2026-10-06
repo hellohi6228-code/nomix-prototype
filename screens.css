@@ -560,3 +560,26 @@ button.dg-field:hover { background: rgba(255, 255, 255, .6); }
 .fv-full .fv-hub { width: 104px; height: 104px; }
 .fv-full .pill .p-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; }
 .fv-full.is-vertical { row-gap: 44px; }
+
+/* Brands: stores grouped under each brand */
+.storebar { display: grid; gap: 8px; }
+.sb-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.storebar .chip.brand { font-weight: 700; }
+.storebar .chip.brand[aria-pressed="false"] { background: transparent; }
+.fv-brand { display: flex; flex-direction: column; align-items: inherit; gap: 8px; }
+.fv-in { gap: 16px; }
+.fv-brand-name {
+  appearance: none; border: 0; background: none; padding: 2px 4px; border-radius: 6px;
+  font: 700 var(--t-tiny)/1.3 var(--f-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3);
+}
+button.fv-brand-name { cursor: pointer; }
+button.fv-brand-name:hover, .fv-brand-name.on { color: var(--green-ink); background: var(--green-wash); }
+.flowviz.is-vertical .fv-brand { align-items: center; }
+.locs .lbl { margin-top: 4px; }
+.pill .p-sub { font-size: var(--t-tiny); font-weight: 600; color: var(--ink-3); white-space: nowrap; }
+.pill.store { flex-direction: column; align-items: flex-start; gap: 0; padding: 7px 14px; }
+.sb-stores { padding: 10px 12px; border-radius: var(--r-md); background: rgba(255, 255, 255, .55); border: 1px solid var(--line); }
+.sb-stores .chip { min-height: 38px; font-size: .9375rem; }
+.locs { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.locs .lbl { grid-column: 1 / -1; }
+.loc { min-height: 54px; padding: 10px 14px; }

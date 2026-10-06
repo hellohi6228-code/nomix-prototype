@@ -4,12 +4,12 @@
   const D = window.NOMIX_DATA;
   const N = (window.Nomix = { acts: {}, inputs: {}, changes: {} });
   N.MAP = window.NOMIX_MAP || {};   // each tool's own field names, from map.js
-  const KEY = 'nomix.v3';
+  const KEY = 'nomix.v5';
 
   /* ---------- State ---------- */
   function fresh() {
     return {
-      v: 3,
+      v: 5,
       phase: 'setup',          // setup | home
       step: 'welcome',         // welcome | tools | connect | track | dictionary | ready
       selected: [],            // tool ids, in the order the owner chose them
@@ -40,7 +40,7 @@
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { const s = JSON.parse(raw); if (s && s.v === 3) return Object.assign(fresh(), s); }
+      if (raw) { const s = JSON.parse(raw); if (s && s.v === 5) return Object.assign(fresh(), s); }
     } catch (e) { /* storage unavailable: start fresh */ }
     return fresh();
   }
@@ -83,25 +83,49 @@
     return a.length === 1 ? a[0] : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
   };
 
-  /* ---------- Stores ---------- */
+  /* ---------- Company, brands and stores ---------- */
+  const STORES = D.COMPANY.brands.flatMap(b => b.stores.map(([id, loc]) => ({ id, loc, brand: b.id, brandName: b.name })));
+  const STORE = Object.fromEntries(STORES.map(s => [s.id, s]));
+  N.brands = () => D.COMPANY.brands;
+  N.brand = bid => D.COMPANY.brands.find(b => b.id === bid);
+  N.brandOf = id => (STORE[id] ? STORE[id].brand : null);
+  N.storeLoc = id => (STORE[id] ? STORE[id].loc : id);
+  N.storeName = id => (STORE[id] ? `${STORE[id].brandName} – ${STORE[id].loc}` : id);
+  // "Umiya: all 18 stores · Surfing Crab: Laredo and Brownsville" (long lists become a count)
+  N.storeList = ids => D.COMPANY.brands.map(b => {
+    const mine = ids.filter(id => N.brandOf(id) === b.id);
+    if (!mine.length) return '';
+    const what = mine.length === b.stores.length && mine.length > 1 ? `all ${mine.length} stores`
+      : mine.length > 3 ? `${mine.length} stores` : N.list(mine.map(N.storeLoc));
+    return `${b.name}: ${what}`;
+  }).filter(Boolean).join(' · ');
+  // What home is showing: 'all', a whole brand ('brand:gl') or one store.
+  N.inView = (storeId, view) => !view || view === 'all' || view === storeId || view === 'brand:' + N.brandOf(storeId);
+  N.viewName = view => (view.startsWith('brand:') ? N.brand(view.slice(6)).name : N.storeName(view));
   N.storesOf = id => (N.S.tools[id] && N.S.tools[id].stores) || [];
-  N.allStores = () => D.ACCOUNT.stores.filter(s => N.connected().some(id => N.storesOf(id).includes(s)));
-  N.viewStore = () => (N.S.phase === 'home' && N.allStores().includes(N.S.store) ? N.S.store : 'all');
-  // What a sign-in finds. Each point of sale runs its own stores; other tools see every store Nomix knows.
+  N.allStores = () => STORES.map(s => s.id).filter(s => N.connected().some(id => N.storesOf(id).includes(s)));
+  N.viewStore = () => {
+    const v = N.S.store;
+    if (N.S.phase !== 'home' || !v || v === 'all') return 'all';
+    return N.allStores().some(s => N.inView(s, v)) ? v : 'all';
+  };
+  // What a sign-in finds. A point-of-sale account covers the open stores of one brand;
+  // other tools see every store Nomix knows.
   // every = changing stores on a tool already connected: offer every store no other point of sale runs.
   N.storesFound = (id, every) => {
-    const t = N.tool(id), all = D.ACCOUNT.stores;
+    const t = N.tool(id), all = STORES.map(s => s.id);
     if (t.kind !== 'pos') {
-      if (every) return all.slice();
+      if (every) return all;
       const known = N.allStores();
-      return known.length ? known : all.slice(0, 2);
+      return known.length ? known : all.filter(s => N.brandOf(s) === D.COMPANY.brands[0].id);
     }
     const claimed = new Set();
     N.connected().forEach(x => { if (x !== id && N.tool(x).kind === 'pos') N.storesOf(x).forEach(s => claimed.add(s)); });
     const free = all.filter(s => !claimed.has(s));
-    if (!free.length) return all.slice();
+    if (!free.length) return all;
     if (every) return free;
-    return claimed.size ? free.slice(0, 1) : free.slice(0, 2);
+    const b = N.brandOf(free[0]);
+    return free.filter(s => N.brandOf(s) === b);
   };
 
   /* ---------- The dictionary ---------- */
@@ -123,7 +147,7 @@
       const t = N.tool(id);
       if (!t || !c.kinds.includes(t.kind)) return;
       if (N.status(id) === 'connected') {
-        const st = N.storesOf(id).filter(s => !store || store === 'all' || s === store);
+        const st = N.storesOf(id).filter(s => N.inView(s, store));
         if (st.length) on.push({ name: t.name, stores: st });
       } else off.push({ name: t.name });
     });
@@ -135,7 +159,7 @@
     if (s.custom) return 'We’ll set this up with you';
     if (s.on.length) return 'From ' + N.list(s.on.map(x => x.name), 3);
     if (s.off.length) return `When ${N.list(s.off.map(x => x.name), 2)} ${s.off.length === 1 ? 'is' : 'are'} connected`;
-    return store && store !== 'all' ? `Nothing sends this for ${store} yet` : 'No tool for this yet';
+    return store && store !== 'all' ? `Nothing sends this for ${N.viewName(store)} yet` : 'No tool for this yet';
   };
 
   // Turn a plain question into the exact details that answer it.
@@ -176,7 +200,7 @@
   N.lastTs = (id, store) => {
     const r = N.S.tools[id];
     if (!r) return 0;
-    const ev = (r.feed || []).find(e => !store || store === 'all' || e.store === store);
+    const ev = (r.feed || []).find(e => N.inView(e.store, store));
     return ev ? ev.ts : r.at || 0;
   };
   N.lastAny = () => N.connected().reduce((m, id) => Math.max(m, N.lastTs(id)), 0);
@@ -186,11 +210,11 @@
   const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const money = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const items = n => `${n} item${n === 1 ? '' : 's'}`;
-  function basket() {
+  function basket(menu) {
     const count = rnd(1, 4), names = [];
     let total = 0, first = null;
     for (let i = 0; i < count; i++) {
-      const d = pick(D.DISHES);
+      const d = pick(menu || D.DISHES);
       first = first || d;
       total += d[1];
       if (!names.includes(d[0])) names.push(d[0]);
@@ -201,29 +225,30 @@
   function dayFor(store, at) {
     const day = new Date(at).toDateString();
     let s = N.S.sales[store];
-    if (!s || s.day !== day) s = N.S.sales[store] = { day, gross: rnd(600, 2200) + rnd(0, 99) / 100, disc: rnd(20, 90), hours: rnd(18, 40), ot: 0 };
+    if (!s || s.day !== day) s = N.S.sales[store] = { day, gross: rnd(4200, 12800) + rnd(0, 99) / 100, disc: rnd(80, 420), hours: rnd(70, 160), ot: 0 };
     return s;
   }
-  const salesVals = (store, s, at) => ({ 'Business day': dayLabel(at), Store: store, 'Gross sales': money(s.gross), Discounts: money(s.disc), 'Net sales': money(s.gross - s.disc), Tax: money(s.gross * 0.0875) });
-  const laborVals = (store, s, at) => ({ 'Business day': dayLabel(at), Store: store, 'Hours worked': s.hours.toFixed(1), 'Overtime hours': s.ot.toFixed(1), Wages: money(s.hours * 18.5 + s.ot * 27.75) });
+  const salesVals = (store, s, at) => ({ 'Business day': dayLabel(at), Store: N.storeName(store), 'Gross sales': money(s.gross), Discounts: money(s.disc), 'Net sales': money(s.gross - s.disc), Tax: money(s.gross * 0.0875) });
+  const laborVals = (store, s, at) => ({ 'Business day': dayLabel(at), Store: N.storeName(store), 'Hours worked': s.hours.toFixed(1), 'Overtime hours': s.ot.toFixed(1), Wages: money(s.hours * 18.5 + s.ot * 27.75) });
   const person = () => { const p = pick(D.STAFF); return { name: p[0], role: p[1] }; };
 
   function makeEvent(id, ts) {
     const t = N.tool(id), r = N.S.tools[id], at = ts || Date.now();
-    const store = pick(r.stores && r.stores.length ? r.stores : [D.ACCOUNT.stores[0]]);
+    const store = pick(r.stores && r.stores.length ? r.stores : [STORES[0].id]);
+    const where = N.storeName(store), menu = D.MENUS[N.brandOf(store)] || D.DISHES;
     r.seq = (r.seq || rnd(1030, 1080)) + 1;
     const n = r.seq, x = Math.random(), time = clock(at), vals = {};
     let title = 'Update received', detail = N.toolWhat(t);
     const order = channel => {
-      const b = basket(), s = dayFor(store, at), d = b.first;
+      const b = basket(menu), s = dayFor(store, at), d = b.first;
       s.gross += b.total;
-      vals.orders = { 'Order number': '#' + n, 'Time placed': time, Store: store, Channel: channel, Total: money(b.total), Server: t.kind === 'pos' ? person().name : '—' };
-      vals.items = { 'Item name': d[0], Quantity: String(rnd(1, 2)), Price: money(d[1]), Options: pick(D.OPTIONS), 'Order number': '#' + n, Store: store };
+      vals.orders = { 'Order number': '#' + n, 'Time placed': time, Store: where, Channel: channel, Total: money(b.total), Server: t.kind === 'pos' ? person().name : '—' };
+      vals.items = { 'Item name': d[0], Quantity: String(rnd(1, 2)), Price: money(d[1]), Options: pick(D.OPTIONS), 'Order number': '#' + n, Store: where };
       vals.menu = { 'Item name': d[0], 'Menu section': d[2], Price: money(d[1]), 'Options and add-ons': pick(D.OPTIONS), Available: 'Yes' };
       if (Math.random() < 0.14) {
         const off = Math.round(b.total * 10) / 100;
         s.disc += off;
-        vals.discounts = { 'Promo name': pick(D.PROMOS), Amount: money(off), 'Order number': '#' + n, 'Applied by': pick(D.MANAGERS), Store: store };
+        vals.discounts = { 'Promo name': pick(D.PROMOS), Amount: money(off), 'Order number': '#' + n, 'Applied by': pick(D.MANAGERS), Store: where };
       }
       if (Math.random() < 0.3) vals.guests = { 'Guest ID': 'G-' + rnd(10200, 48900), 'First visit': dayLabel(at - rnd(3, 400) * 86400000), Visits: String(rnd(2, 41)), 'Total spent': money(rnd(40, 1900)), 'Loyalty points': String(rnd(10, 900)) };
       vals.sales = salesVals(store, s, at);
@@ -232,30 +257,30 @@
     const shift = () => {
       const p = person(), out = Math.random() < 0.4, s = dayFor(store, at);
       if (out) { s.hours += rnd(5, 8); if (Math.random() < 0.15) s.ot += 1; }
-      vals.staff = { 'Team member': p.name, Role: p.role, 'Clock in': out ? clock(at - rnd(5, 8) * 3600000) : time, 'Clock out': out ? time : 'Still on shift', Breaks: out ? pick(['30 min', '15 min']) : 'None yet', Store: store };
+      vals.staff = { 'Team member': p.name, Role: p.role, 'Clock in': out ? clock(at - rnd(5, 8) * 3600000) : time, 'Clock out': out ? time : 'Still on shift', Breaks: out ? pick(['30 min', '15 min']) : 'None yet', Store: where };
       vals.labor = laborVals(store, s, at);
-      vals.team = { Name: p.name, Role: p.role, Store: store, 'Pay rate': money(rnd(17, 24)), 'Start date': dayLabel(at - rnd(30, 900) * 86400000) };
+      vals.team = { Name: p.name, Role: p.role, Store: where, 'Pay rate': money(rnd(17, 24)), 'Start date': dayLabel(at - rnd(30, 900) * 86400000) };
       title = `${p.name} clocked ${out ? 'out' : 'in'}`; detail = p.role;
     };
     switch (t.kind) {
       case 'pos':
         if (x < 0.42) { const b = order(pick(['Dine-in', 'Dine-in', 'Pickup'])); title = `Order #${n}`; detail = `${items(b.count)} · ${b.names} · ${money(b.total)}`; }
         else if (x < 0.6) {
-          const amt = basket().total, tip = Math.round(amt * pick([0, 0.15, 0.18, 0.2]) * 100) / 100, how = pick(['Card', 'Card', 'Cash', 'Apple Pay', 'Gift card']);
+          const amt = basket(menu).total, tip = Math.round(amt * pick([0, 0.15, 0.18, 0.2]) * 100) / 100, how = pick(['Card', 'Card', 'Cash', 'Apple Pay', 'Gift card']);
           vals.payments = { 'Order number': '#' + (n - 1), Amount: money(amt), Tip: money(tip), 'Paid with': how, 'Card brand': how === 'Card' ? pick(['Visa', 'Mastercard', 'Amex']) : '—', 'Time paid': time };
-          if (tip) vals.tips = { 'Team member': person().name, 'Card tips': money(tip), 'Cash tips': money(how === 'Cash' ? tip : 0), 'Business day': dayLabel(at), Store: store };
+          if (tip) vals.tips = { 'Team member': person().name, 'Card tips': money(tip), 'Cash tips': money(how === 'Cash' ? tip : 0), 'Business day': dayLabel(at), Store: where };
           title = `Payment for #${n - 1}`; detail = `${how} · ${money(amt)}${tip ? ` + ${money(tip)} tip` : ''}`;
         } else if (x < 0.65) {
-          const amt = pick(D.DISHES)[1], why = pick(D.REASONS), on = n - rnd(2, 9);
+          const amt = pick(menu)[1], why = pick(D.REASONS), on = n - rnd(2, 9);
           vals.refunds = { 'Order number': '#' + on, 'Amount refunded': money(amt), Reason: why, 'Approved by': pick(D.MANAGERS), Time: time };
           title = `Refund on #${on}`; detail = `${money(amt)} · ${why}`;
         } else if (x < 0.69) {
-          const d = pick(D.DISHES), why = pick(['Sent wrong', 'Guest complaint', 'Staff meal', 'Rang in twice']);
-          vals.voids = { 'Item name': d[0], Amount: money(d[1]), Reason: why, 'Approved by': pick(D.MANAGERS), Store: store, Time: time };
+          const d = pick(menu), why = pick(['Sent wrong', 'Guest complaint', 'Staff meal', 'Rang in twice']);
+          vals.voids = { 'Item name': d[0], Amount: money(d[1]), Reason: why, 'Approved by': pick(D.MANAGERS), Store: where, Time: time };
           title = `${d[0]} voided`; detail = why;
         } else if (x < 0.82) {
           const mins = rnd(6, 16), st = pick(D.STATIONS);
-          vals.tickets = { 'Ticket number': '#' + n, 'Sent to kitchen': clock(at - mins * 60000), 'Ready at': time, 'Minutes to make': String(mins), Station: st, Store: store };
+          vals.tickets = { 'Ticket number': '#' + n, 'Sent to kitchen': clock(at - mins * 60000), 'Ready at': time, 'Minutes to make': String(mins), Station: st, Store: where };
           title = `Ticket #${n} ready`; detail = `${st} station · ${mins} min`;
         } else if (x < 0.91) shift();
         else if (x < 0.95) {
@@ -264,10 +289,10 @@
           title = `Gift card ${used ? 'used' : 'sold'}`; detail = money(amt);
         } else if (x < 0.98) {
           const exp = rnd(300, 1400), diff = pick([0, 0, 0, -5, 2.5, -12]);
-          vals.cash = { Drawer: pick(['Front 1', 'Front 2', 'Bar']), 'Opening cash': money(200), 'Expected cash': money(exp), 'Counted cash': money(exp + diff), 'Over or short': money(diff), Store: store };
+          vals.cash = { Drawer: pick(['Front 1', 'Front 2', 'Bar']), 'Opening cash': money(200), 'Expected cash': money(exp), 'Counted cash': money(exp + diff), 'Over or short': money(diff), Store: where };
           title = 'Drawer closed'; detail = diff ? `${diff > 0 ? 'Over' : 'Short'} ${money(Math.abs(diff))}` : 'Balanced';
         } else {
-          const d = pick(D.DISHES);
+          const d = pick(menu);
           vals.menu = { 'Item name': d[0], 'Menu section': d[2], Price: money(d[1]), 'Options and add-ons': '—', Available: 'No' };
           title = `${d[0]} sold out`; detail = d[2];
         }
@@ -275,8 +300,8 @@
       case 'delivery':
         if (x < 0.74) { const b = order(`Delivery · ${t.name}`); title = `Delivery order #${n}`; detail = `${items(b.count)} · ${b.names} · ${money(b.total)}`; }
         else if (x < 0.82) {
-          const d = pick(D.DISHES), why = pick(['Item was missing', 'Wrong item', 'Order arrived late']);
-          vals.apperrors = { App: t.name, 'Order number': '#' + (n - rnd(1, 6)), 'Item name': d[0], 'Error charge': money(d[1]), Reason: why, Store: store };
+          const d = pick(menu), why = pick(['Item was missing', 'Wrong item', 'Order arrived late']);
+          vals.apperrors = { App: t.name, 'Order number': '#' + (n - rnd(1, 6)), 'Item name': d[0], 'Error charge': money(d[1]), Reason: why, Store: where };
           vals.refunds = { 'Order number': '#' + (n - rnd(1, 6)), 'Amount refunded': money(d[1]), Reason: why, 'Approved by': t.name, Time: time };
           title = 'Charge for a missing item'; detail = `${d[0]} · ${money(d[1])}`;
         } else if (x < 0.9) {
@@ -285,7 +310,7 @@
           title = `${c[0]}-star rating`; detail = c[1];
         } else if (x < 0.95) {
           const mins = rnd(8, 45);
-          vals.downtime = { App: t.name, Store: store, 'Paused from': clock(at - mins * 60000), 'Paused until': time, 'Minutes offline': String(mins) };
+          vals.downtime = { App: t.name, Store: where, 'Paused from': clock(at - mins * 60000), 'Paused until': time, 'Minutes offline': String(mins) };
           title = 'Store was paused'; detail = `${mins} min offline`;
         } else {
           const sales = rnd(1800, 6400), com = sales * 0.25, fees = rnd(20, 90), mkt = rnd(0, 150);
@@ -304,7 +329,7 @@
         if (x < 0.85) {
           const deal = pick(D.DEALS), price = rnd(18, 68), s = dayFor(store, at);
           s.gross += price;
-          vals.orders = { 'Order number': '#' + n, 'Time placed': time, Store: store, Channel: `Voucher · ${t.name}`, Total: money(price), Server: '—' };
+          vals.orders = { 'Order number': '#' + n, 'Time placed': time, Store: where, Channel: `Voucher · ${t.name}`, Total: money(price), Server: '—' };
           vals.sales = salesVals(store, s, at);
           title = 'Voucher used'; detail = `${deal} · ${money(price)}`;
         } else {
@@ -318,7 +343,7 @@
         if (x < 0.6) shift();
         else {
           const p = person(), start = rnd(7, 17);
-          vals.schedules = { 'Team member': p.name, Role: p.role, 'Shift start': `${start > 12 ? start - 12 : start}:00 ${start >= 12 ? 'PM' : 'AM'}`, 'Shift end': `${(start + 6) > 12 ? start - 6 : start + 6}:00 ${start + 6 >= 12 ? 'PM' : 'AM'}`, Store: store };
+          vals.schedules = { 'Team member': p.name, Role: p.role, 'Shift start': `${start > 12 ? start - 12 : start}:00 ${start >= 12 ? 'PM' : 'AM'}`, 'Shift end': `${(start + 6) > 12 ? start - 6 : start + 6}:00 ${start + 6 >= 12 ? 'PM' : 'AM'}`, Store: where };
           title = 'Shift scheduled'; detail = `${p.name} · ${p.role}`;
         }
         break;
@@ -326,7 +351,7 @@
         const it = pick(D.STOCK);
         if (x < 0.35) {
           const qty = rnd(2, 40);
-          vals.inventory = { Item: it[0], 'Amount on hand': String(qty), Unit: it[1], Store: store, 'Counted on': dayLabel(at) };
+          vals.inventory = { Item: it[0], 'Amount on hand': String(qty), Unit: it[1], Store: where, 'Counted on': dayLabel(at) };
           title = 'Inventory count saved'; detail = `${it[0]} · ${qty} ${it[1]}`;
         } else if (x < 0.65) {
           const qty = rnd(2, 20), cost = rnd(8, 60) + 0.5;
@@ -338,7 +363,7 @@
           title = 'Recipe cost updated'; detail = `${rc[0]} · ${money(rc[3] * 2.6)} a plate`;
         } else {
           const why = pick(D.WASTE_REASONS), amt = rnd(1, 6);
-          vals.waste = { Item: it[0], Amount: `${amt} ${it[1]}`, Reason: why, Store: store, Date: dayLabel(at) };
+          vals.waste = { Item: it[0], Amount: `${amt} ${it[1]}`, Reason: why, Store: where, Date: dayLabel(at) };
           title = 'Waste logged'; detail = `${it[0]} · ${why}`;
         }
         break;
@@ -346,22 +371,22 @@
       case 'camera':
         if (x < 0.7) {
           const k = rnd(1, 8), m = rnd(1, 9), shelf = rnd(0, 6);
-          vals.lines = { 'People in line': String(k), 'Wait at pickup': String(m), 'Orders on the shelf': String(shelf), Store: store, Time: time };
+          vals.lines = { 'People in line': String(k), 'Wait at pickup': String(m), 'Orders on the shelf': String(shelf), Store: where, Time: time };
           title = 'Line and pickup shelf'; detail = `${k} in line · longest wait ${m} min`;
         } else {
           const ppl = rnd(12, 70);
-          vals.traffic = { Store: store, Hour: clock(at - (at % 3600000)), 'People who came in': String(ppl) };
+          vals.traffic = { Store: where, Hour: clock(at - (at % 3600000)), 'People who came in': String(ppl) };
           title = 'Foot traffic'; detail = `${ppl} people this hour`;
         }
         break;
       case 'sensor': {
         const f = pick(D.FRIDGES), v = rnd(f[1], f[2]);
-        vals.temps = { 'Fridge or freezer': f[0], Temperature: `${v}°F`, 'Time checked': time, 'Safe range': f[3], 'Inside the safe range': 'Yes', Store: store };
+        vals.temps = { 'Fridge or freezer': f[0], Temperature: `${v}°F`, 'Time checked': time, 'Safe range': f[3], 'Inside the safe range': 'Yes', Store: where };
         title = f[0]; detail = `${v}°F · in the safe range`;
         break;
       }
     }
-    return { ts: at, store, title, detail: `${detail} · ${store}`, vals };
+    return { ts: at, store, title, detail: `${detail} · ${where}`, vals };
   }
   // Every value lands in the shared dictionary, filed under its tag, detail and store.
   const HIST = 12;
@@ -383,7 +408,7 @@
     const m = N.S.latest[cat];
     if (!m) return null;
     let best = null;
-    (store && store !== 'all' ? [store] : Object.keys(m)).forEach(s => {
+    Object.keys(m).filter(s => N.inView(s, store)).forEach(s => {
       const e = m[s] && m[s][field];
       if (e && N.tool(e.tool) && (!best || e.ts > best.ts)) best = Object.assign({ store: s }, e);
     });
@@ -391,7 +416,7 @@
   };
   // The most recent values of one detail, newest first.
   N.histFor = (cat, field, store, max) => (((N.S.hist[cat] || {})[field]) || [])
-    .filter(e => N.tool(e.tool) && (!store || store === 'all' || e.store === store)).slice(0, max || 5);
+    .filter(e => N.tool(e.tool) && N.inView(e.store, store)).slice(0, max || 5);
   N.typeOf = (cat, field) => { const c = N.cat(cat); return (c && c.types && c.types[field]) || 'Text'; };
   N.seedFeed = id => {
     const r = N.S.tools[id], now = Date.now();
@@ -434,7 +459,7 @@
     document.querySelectorAll('[data-fvc]').forEach(el => {
       const [cat, field] = el.dataset.fvc.split('|');
       const e = N.fieldNow(cat, field, store);
-      const v = N.L(e ? e.v : '—'), s = N.L(e ? `${N.tool(e.tool).name} · ${e.store} · ${N.rel(e.ts)}` : N.waitingText(cat, store));
+      const v = N.L(e ? e.v : '—'), s = N.L(e ? `${N.tool(e.tool).name} · ${N.storeName(e.store)} · ${N.rel(e.ts)}` : N.waitingText(cat, store));
       const val = el.querySelector('.fvc-v'), src = el.querySelector('.fvc-s');
       if (val.textContent !== v) {
         if (val.textContent && e) { el.classList.remove('fresh'); void el.offsetWidth; el.classList.add('fresh'); }
