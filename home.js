@@ -37,6 +37,7 @@
         <p class="summary"><span class="dot ${c.length ? 'ok' : help ? 'help' : ''}"></span>${esc(parts.length ? parts.join(' · ') : 'No tools connected yet')}</p>
       </div>
       ${storeBar(store)}
+      ${N.focusKey() ? `<div class="focusbar"><span class="lbl">Showing</span><button type="button" class="chip" id="focus-clear" data-act="focus" data-id="${esc(N.focusKey())}" aria-pressed="true" aria-label="Show everything">${esc(N.focusName())}${N.icon('x')}</button></div>` : ''}
     </header>`;
   }
   // Shown while looking at a past version.
@@ -160,10 +161,12 @@
     </article>`;
   }
   function connectedSection(store) {
-    const list = N.S.selected.filter(id => inView(id, store));
+    const ft = N.focusTools();
+    const list = N.S.selected.filter(id => inView(id, store) && (!ft || ft.includes(id)));
     return `<section class="sec" aria-labelledby="sec-tools"><h2 class="sec-h" id="sec-tools">Connected</h2>
       <div class="stack">
-        ${list.length ? list.map(id => toolCard(id, store)).join('') : '<div class="glass empty-card"><p class="meta">No tools yet. Connect the ones you use every day.</p></div>'}
+        ${list.length ? list.map(id => toolCard(id, store)).join('')
+          : `<div class="glass empty-card"><p class="meta">${N.S.selected.length ? 'Nothing connected matches this filter.' : 'No tools yet. Connect the ones you use every day.'}</p></div>`}
         <button type="button" class="adder edit-only" id="pick-open" data-act="pick-open">${N.icon('plus')}Connect your tool(s)</button>
       </div></section>`;
   }
@@ -200,7 +203,7 @@
         <span class="dg-n">${esc(f)}</span><span class="dg-t">Added by you</span>
         <button type="button" class="x edit-only" data-act="field-remove" data-id="${esc(id)}" data-k="${k}" aria-label="Remove ${esc(f)}">${N.icon('x')}</button></div></li>`).join('');
     const adding = N.ui.fieldAdd === id;
-    if (!N.tagOpen(id)) return `<div class="dg">${N.tagHead(id, store, 'h3')}</div>`;
+    if (!N.tagOpen(id) && N.focusKey() !== 'tag:' + id) return `<div class="dg">${N.tagHead(id, store, 'h3')}</div>`;
     return `<div class="dg is-open">
       ${N.tagHead(id, store, 'h3')}
       ${rows ? `<ul class="dg-fields">${rows}</ul>` : '<p class="meta">No fields yet. Add the first one.</p>'}
@@ -222,7 +225,7 @@
     </div>`;
   }
   function dictSection(store) {
-    const k = N.keepIds(), qs = N.S.questions, busy = N.ui.keepAdding || N.ui.asking;
+    const fk = N.focusTags(), k = N.keepIds().filter(id => !fk || fk.includes(id)), qs = N.S.questions, busy = N.ui.keepAdding || N.ui.asking;
     return `<section class="sec" aria-labelledby="sec-dict"><h2 class="sec-h" id="sec-dict">Data dictionary</h2>
       <div class="glass keepcard">
         ${qs.length ? `<div class="qwrap"><span class="lbl">Your prompts</span>${N.qRows()}</div>` : ''}
@@ -287,6 +290,8 @@
   };
   Object.assign(N.acts, {
     store: (d, el) => { N.S.store = d.id; if (!N.viewing) N.save(); N.render({ refocus: el.id, keepScroll: true }); },
+    // Tap a tool or tag in the diagram to see what it touches; tap it again (or the chip) to show everything.
+    focus: (d, el) => { N.ui.focus = N.ui.focus === d.id ? null : d.id; N.render({ refocus: el.id === 'focus-clear' ? null : el.id, keepScroll: true }); },
     'toggle-open': d => {
       N.S.open = N.S.open === d.key ? null : d.key;
       N.ui.streamAdd = null; N.ui.disconnect = null;

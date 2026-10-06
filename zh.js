@@ -187,7 +187,7 @@
     'Waste logged': '已记录报损', 'Line and pickup shelf': '排队与取餐架', 'Charge for a missing item': '漏餐扣款', 'Store was paused': '门店暂停营业',
     'Payout sent': '已结算', 'Gift card sold': '储值卡已售出', 'Gift card used': '储值卡已使用',
     'Snowflake': 'Snowflake', 'just now': '刚刚', 'Updated just now': '刚刚更新',
-    'Stores': '门店', 'Working ·': '运行中 ·', 'Add a tool': '添加工具', 'your account': '您的账户', 'Past version': '过往版本', 'Your stores': '您的门店', 'Your company': '您的公司', 'Choose a brand or store': '选择品牌或门店',
+    'Stores': '门店', 'Working ·': '运行中 ·', 'Add a tool': '添加工具', 'your account': '您的账户', 'Past version': '过往版本', 'Your stores': '您的门店', 'Your company': '您的公司', 'Showing': '仅显示', 'Show everything': '显示全部', 'Nothing connected matches this filter.': '没有符合此筛选的已连接工具。', 'Choose a brand or store': '选择品牌或门店',
     'Lobster King Roll': '龙虾王卷', 'Amazing Tuna Roll': '惊艳金枪鱼卷', 'A5 Wagyu Sando': 'A5 和牛三明治', 'Cheese Baked Lobster': '芝士焗龙虾',
     'Toro & Uni Nigiri': '金枪鱼腩与海胆握寿司', 'AYCE Dinner': '自助晚餐', 'King Crab Leg Combo': '帝王蟹腿套餐', 'Snow Crab Leg Combo': '雪蟹腿套餐',
     'Surfing Special Boil': 'Surfing 招牌海鲜锅', 'Surfing Crab Loaded Fries': 'Surfing Crab 豪华薯条', 'Fried Jumbo Shrimp Basket': '酥炸大虾篮',

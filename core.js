@@ -128,6 +128,31 @@
     return free.filter(s => N.brandOf(s) === b);
   };
 
+  /* ---------- Focus on one tool or tag (tapped in the Overview diagram) ---------- */
+  N.toolFeeds = (toolId, tagId) => { const t = N.tool(toolId), c = N.cat(tagId); return !!(t && c && !c.custom && c.kinds.includes(t.kind)); };
+  const focusOn = () => {
+    const f = N.ui.focus;
+    if (!f) return null;
+    if (f.startsWith('tool:')) return N.S.selected.includes(f.slice(5)) ? f : null;
+    return N.keepIds().includes(f.slice(4)) ? f : null;
+  };
+  // null means nothing is focused, so everything shows.
+  N.focusTools = () => {
+    const f = focusOn();
+    if (!f) return null;
+    return f.startsWith('tool:') ? [f.slice(5)] : N.S.selected.filter(id => N.toolFeeds(id, f.slice(4)));
+  };
+  N.focusTags = () => {
+    const f = focusOn();
+    if (!f) return null;
+    return f.startsWith('tag:') ? [f.slice(4)] : N.keepIds().filter(k => N.toolFeeds(f.slice(5), k));
+  };
+  N.focusName = () => {
+    const f = focusOn();
+    return !f ? '' : f.startsWith('tool:') ? N.tool(f.slice(5)).name : N.cat(f.slice(4)).name;
+  };
+  N.focusKey = focusOn;
+
   /* ---------- The dictionary ---------- */
   N.orderKeep = ids => {
     const set = new Set(ids);
@@ -732,7 +757,7 @@
     N.render({ focus: true }); window.scrollTo(0, 0);
     N.toast(`Back to the setup from ${N.whenShort(v.at)}`);
   };
-  N.VIEW_ACTS = ['toggle-open', 'field-open', 'tag-open', 'store', 'history-toggle', 'history-view', 'view-exit', 'view-restore', 'view-restore-confirm', 'view-restore-cancel'];
+  N.VIEW_ACTS = ['toggle-open', 'field-open', 'tag-open', 'store', 'focus', 'history-toggle', 'history-view', 'view-exit', 'view-restore', 'view-restore-confirm', 'view-restore-cancel'];
 
   /* ---------- Rendering ---------- */
   N.go = step => { N.S.step = step; N.save(); N.render({ focus: true }); window.scrollTo(0, 0); };

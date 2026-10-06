@@ -6,40 +6,55 @@
   const toolState = id => { const s = N.status(id); return s === 'connected' ? 'live' : s === 'help' ? 'help' : 'later'; };
 
   // One diagram for the end of setup and for Overview: brands (or one brand's stores) → tools → Nomix → tags.
-  // view = 'all', 'brand:<id>' or one store; pick = true lets a brand or store be tapped to focus on it.
+  // view = 'all', 'brand:<id>' or one store. pick = Overview: every bubble but Nomix can be tapped —
+  // a brand or store narrows the page to it; a tool or tag highlights what it touches.
   N.storeFlow = (view, pick) => {
     const stores = N.allStores(), sel = N.S.selected, keep = N.keepIds();
-    const node = (key, label, sub, to, act, on, dim) => (pick
-      ? `<button type="button" class="pill store${dim ? ' dim' : ''}" id="sf-${esc(key)}" data-node="${esc(key)}" data-to="${esc(to)}" data-act="store" data-id="${esc(act)}" aria-pressed="${on}"><span class="p-name">${esc(label)}</span>${sub ? `<span class="p-sub">${esc(sub)}</span>` : ''}</button>`
-      : `<span class="pill store" data-node="${esc(key)}" data-to="${esc(to)}"><span class="p-name">${esc(label)}</span>${sub ? `<span class="p-sub">${esc(sub)}</span>` : ''}</span>`);
-    const linksTo = (ids, live) => N.connected().filter(t => N.storesOf(t).some(s => ids.includes(s))).map(t => `t-${t}:${live ? 'live' : 'dim'}`).join(' ');
-    const focus = view === 'all' ? null : view.startsWith('brand:') ? view.slice(6) : N.brandOf(view);
+    const fTools = pick ? N.focusTools() : null, fTags = pick ? N.focusTags() : null, focus = pick ? N.ui.focus : null;
+    const toolOn = id => !fTools || fTools.includes(id);
+    const tagOn = id => !fTags || fTags.includes(id);
+    const reached = ids => !fTools || fTools.some(t => N.storesOf(t).some(s => ids.includes(s)));
+    const sub = (text) => (text ? `<span class="p-sub">${esc(text)}</span>` : '');
+    const node = (key, label, subText, to, act, on, dim) => (pick
+      ? `<button type="button" class="pill store${dim ? ' dim' : ''}" id="sf-${esc(key)}" data-node="${esc(key)}" data-to="${esc(to)}" data-act="store" data-id="${esc(act)}" aria-pressed="${on}"><span class="p-name">${esc(label)}</span>${sub(subText)}</button>`
+      : `<span class="pill store" data-node="${esc(key)}" data-to="${esc(to)}"><span class="p-name">${esc(label)}</span>${sub(subText)}</span>`);
+    const linksTo = (ids, live) => N.connected().filter(t => N.storesOf(t).some(s => ids.includes(s)))
+      .map(t => `t-${t}:${live && toolOn(t) ? 'live' : 'dim'}`).join(' ');
+    const open = view === 'all' ? null : view.startsWith('brand:') ? view.slice(6) : N.brandOf(view);
     let storePills;
     if (!stores.length) storePills = '<span class="pill store later"><span class="p-name">Your stores</span></span>';
-    else if (!focus) {
+    else if (!open) {
       // Every brand as one node, with how many of its stores are connected.
       storePills = N.brands().map(b => {
-        const mine = stores.filter(s => N.brandOf(s) === b.id);
-        return mine.length ? node('b-' + b.id, b.name, `${mine.length} ${mine.length === 1 ? 'store' : 'stores'}`, linksTo(mine, true), 'brand:' + b.id, false, false) : '';
+        const mine = stores.filter(s => N.brandOf(s) === b.id), live = reached(mine);
+        return mine.length ? node('b-' + b.id, b.name, `${mine.length} ${mine.length === 1 ? 'store' : 'stores'}`, linksTo(mine, live), 'brand:' + b.id, false, !live) : '';
       }).join('');
     } else {
       // One brand open: its stores, the chosen one highlighted.
-      const b = N.brand(focus), mine = stores.filter(s => N.brandOf(s) === focus);
+      const b = N.brand(open), mine = stores.filter(s => N.brandOf(s) === open);
       const head = pick
-        ? `<button type="button" class="fv-brand-name on" id="sfb-${esc(focus)}" data-act="store" data-id="all" aria-pressed="true">${esc(b.name)}</button>`
+        ? `<button type="button" class="fv-brand-name on" id="sfb-${esc(open)}" data-act="store" data-id="all" aria-pressed="true">${esc(b.name)}</button>`
         : `<span class="fv-brand-name">${esc(b.name)}</span>`;
       storePills = `<div class="fv-brand">${head}${mine.map(s => {
-        const live = N.inView(s, view), on = view === s;
-        return node('s-' + s, N.storeLoc(s), '', linksTo([s], live), on ? 'brand:' + focus : s, on, !live);
+        const live = N.inView(s, view) && reached([s]), on = view === s;
+        return node('s-' + s, N.storeLoc(s), '', linksTo([s], live), on ? 'brand:' + open : s, on, !live);
       }).join('')}</div>`;
     }
     const toolPills = sel.length ? sel.map(id => {
-      const t = N.tool(id), st = toolState(id);
-      const dim = st === 'live' && view !== 'all' && !N.storesOf(id).some(s => N.inView(s, view));
-      return `<span class="pill ${st}${dim ? ' dim' : ''}" data-node="t-${esc(id)}" data-to="hub:${dim ? 'dim' : st}">${N.mono(t)}<span class="p-name">${esc(t.name)}</span></span>`;
+      const t = N.tool(id), st = toolState(id), on = focus === 'tool:' + id;
+      const dim = !toolOn(id) || (st === 'live' && view !== 'all' && !N.storesOf(id).some(s => N.inView(s, view)));
+      const inner = `${N.mono(t)}<span class="p-name">${esc(t.name)}</span>`, to = `hub:${dim ? 'dim' : st}`;
+      return pick
+        ? `<button type="button" class="pill ${st}${dim ? ' dim' : ''}" id="ft-${esc(id)}" data-node="t-${esc(id)}" data-to="${to}" data-act="focus" data-id="tool:${esc(id)}" aria-pressed="${on}">${inner}</button>`
+        : `<span class="pill ${st}${dim ? ' dim' : ''}" data-node="t-${esc(id)}" data-to="${to}">${inner}</span>`;
     }).join('') : '<span class="pill later" data-node="t-none" data-to="hub:later"><span class="p-name">Your tools</span></span>';
-    const tagState = id => (N.flowing(id, view) ? 'live' : N.cat(id).custom ? 'help' : 'later');
-    const tagPills = keep.map(id => `<span class="pill out ${tagState(id)}" data-node="k-${esc(id)}"><span class="p-name">${esc(N.cat(id).name)}</span></span>`).join('');
+    const tagState = id => (!tagOn(id) ? 'dim' : N.flowing(id, view) ? 'live' : N.cat(id).custom ? 'help' : 'later');
+    const tagPills = keep.map(id => {
+      const st = tagState(id), on = focus === 'tag:' + id, label = `<span class="p-name">${esc(N.cat(id).name)}</span>`;
+      return pick
+        ? `<button type="button" class="pill out ${st}" id="fk-${esc(id)}" data-node="k-${esc(id)}" data-act="focus" data-id="tag:${esc(id)}" aria-pressed="${on}">${label}</button>`
+        : `<span class="pill out ${st}" data-node="k-${esc(id)}">${label}</span>`;
+    }).join('');
     const hubTo = keep.map(id => `k-${id}:${tagState(id)}`).join(' ');
     return `<div class="flowviz fv-full" data-min="640" role="group" aria-label="How each store flows into Nomix">
       <svg class="wires" aria-hidden="true"></svg>

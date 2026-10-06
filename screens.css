@@ -583,3 +583,11 @@ button.fv-brand-name:hover, .fv-brand-name.on { color: var(--green-ink); backgro
 .locs { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
 .locs .lbl { grid-column: 1 / -1; }
 .loc { min-height: 54px; padding: 10px 14px; }
+
+/* Overview: tools and tags can be tapped too */
+button.pill { appearance: none; cursor: pointer; font: inherit; color: inherit; text-align: left; transition: border-color .2s, background .2s, opacity .2s; }
+button.pill:hover { border-color: var(--green); }
+button.pill[aria-pressed="true"] { border-color: var(--green); background: linear-gradient(var(--green-wash), var(--green-wash)), var(--glass-hi); box-shadow: 0 0 0 3px var(--green-wash); }
+.focusbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; }
+.focusbar .chip { gap: 8px; border-color: var(--green); background: var(--green-wash); color: var(--green-ink); }
+.focusbar .chip svg { width: 14px; height: 14px; }
