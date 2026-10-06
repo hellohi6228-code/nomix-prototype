@@ -187,7 +187,7 @@
     'Waste logged': '已记录报损', 'Line and pickup shelf': '排队与取餐架', 'Charge for a missing item': '漏餐扣款', 'Store was paused': '门店暂停营业',
     'Payout sent': '已结算', 'Gift card sold': '储值卡已售出', 'Gift card used': '储值卡已使用',
     'Snowflake': 'Snowflake', 'just now': '刚刚', 'Updated just now': '刚刚更新',
-    'Stores': '门店', 'Working ·': '运行中 ·', 'Add a tool': '添加工具', 'your account': '您的账户', 'Past version': '过往版本', 'How each store flows into Nomix': '每家门店的数据如何流入 Nomix'
+    'Stores': '门店', 'Working ·': '运行中 ·', 'Add a tool': '添加工具', 'your account': '您的账户', 'Past version': '过往版本', 'Your stores': '您的门店', 'How each store flows into Nomix': '每家门店的数据如何流入 Nomix'
   }));
 
   // Lists: "A and B" → "A和B", "A, B and C" → "A、B和C".

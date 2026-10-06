@@ -5,43 +5,31 @@
   const still = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const toolState = id => { const s = N.status(id); return s === 'connected' ? 'live' : s === 'help' ? 'help' : 'later'; };
 
-  // Ready screen: tools → Nomix → what it keeps.
-  N.flowViz = () => {
-    const sel = N.S.selected, keep = N.keepIds();
-    const ins = sel.length
-      ? sel.map(id => { const t = N.tool(id), st = toolState(id);
-        return `<span class="pill ${st}" data-node="t-${esc(id)}" data-to="hub:${st}">${N.mono(t)}<span class="p-name">${esc(t.name)}</span></span>`; }).join('')
-      : '<span class="pill later" data-node="t-none" data-to="hub:later"><span class="p-name">Your tools</span></span>';
-    const outs = keep.map(id => { const c = N.cat(id), st = N.flowing(id) ? 'live' : c.custom ? 'help' : 'later';
-      return `<span class="pill out ${st}" data-node="k-${esc(id)}"><span class="p-name">${esc(c.name)}</span></span>`; }).join('');
-    const hubTo = keep.map(id => `k-${id}:${N.flowing(id) ? 'live' : N.cat(id).custom ? 'help' : 'later'}`).join(' ');
-    return `<div class="flowviz" data-min="600">
-      <svg class="wires" aria-hidden="true"></svg>
-      <div class="fv-col fv-in">${ins}</div>
-      <div class="fv-hub" data-node="hub" data-to="${esc(hubTo)}">${N.knot()}<span>Nomix</span></div>
-      <div class="fv-col fv-out">${outs}</div>
-    </div>`;
-  };
-
-  // Home: every store → the tools it runs on → one Nomix dictionary and data home.
-  N.storeFlow = view => {
-    const stores = N.allStores(), sel = N.S.selected;
-    const storePills = stores.map((s, k) => {
+  // One diagram for the end of setup and for Overview: stores → tools → Nomix → tags.
+  // view = 'all' or one store; pick = true lets a store be tapped to focus on it.
+  N.storeFlow = (view, pick) => {
+    const stores = N.allStores(), sel = N.S.selected, keep = N.keepIds();
+    const storePills = stores.length ? stores.map((s, k) => {
       const to = N.connected().filter(id => N.storesOf(id).includes(s)).map(id => `t-${id}:${view === 'all' || view === s ? 'live' : 'dim'}`).join(' ');
       const on = view === s, dim = view !== 'all' && !on;
-      return `<button type="button" class="pill store${dim ? ' dim' : ''}" id="sf-${k}" data-node="s-${k}" data-to="${esc(to)}" data-act="store" data-id="${esc(on ? 'all' : s)}" aria-pressed="${on}">
-        <span class="p-name">${esc(s)}</span></button>`;
-    }).join('');
-    const toolPills = sel.map(id => {
+      return pick
+        ? `<button type="button" class="pill store${dim ? ' dim' : ''}" id="sf-${k}" data-node="s-${k}" data-to="${esc(to)}" data-act="store" data-id="${esc(on ? 'all' : s)}" aria-pressed="${on}"><span class="p-name">${esc(s)}</span></button>`
+        : `<span class="pill store" data-node="s-${k}" data-to="${esc(to)}"><span class="p-name">${esc(s)}</span></span>`;
+    }).join('') : '<span class="pill store later"><span class="p-name">Your stores</span></span>';
+    const toolPills = sel.length ? sel.map(id => {
       const t = N.tool(id), st = toolState(id);
       const dim = st === 'live' && view !== 'all' && !N.storesOf(id).includes(view);
       return `<span class="pill ${st}${dim ? ' dim' : ''}" data-node="t-${esc(id)}" data-to="hub:${dim ? 'dim' : st}">${N.mono(t)}<span class="p-name">${esc(t.name)}</span></span>`;
-    }).join('');
-    return `<div class="flowviz fv-stores" data-min="560" role="group" aria-label="How each store flows into Nomix">
+    }).join('') : '<span class="pill later" data-node="t-none" data-to="hub:later"><span class="p-name">Your tools</span></span>';
+    const tagState = id => (N.flowing(id, view) ? 'live' : N.cat(id).custom ? 'help' : 'later');
+    const tagPills = keep.map(id => `<span class="pill out ${tagState(id)}" data-node="k-${esc(id)}"><span class="p-name">${esc(N.cat(id).name)}</span></span>`).join('');
+    const hubTo = keep.map(id => `k-${id}:${tagState(id)}`).join(' ');
+    return `<div class="flowviz fv-full" data-min="640" role="group" aria-label="How each store flows into Nomix">
       <svg class="wires" aria-hidden="true"></svg>
       <div class="fv-col fv-in">${storePills}</div>
       <div class="fv-col fv-mid">${toolPills}</div>
-      <div class="fv-hub" data-node="hub">${N.knot()}<span>Nomix</span></div>
+      <div class="fv-hub" data-node="hub" data-to="${esc(hubTo)}">${N.knot()}<span>Nomix</span></div>
+      <div class="fv-col fv-out">${tagPills}</div>
     </div>`;
   };
 

@@ -358,7 +358,6 @@
 .q-k { grid-column: 1; font-size: var(--t-small); color: var(--ink-2); }
 
 /* Every store, one data home */
-.fv-stores { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; column-gap: clamp(36px, 7vw, 88px); }
 .fv-mid { align-items: center; }
 .pill.store {
   appearance: none; cursor: pointer; color: var(--ink); padding: 9px 16px;
@@ -368,7 +367,6 @@
 .pill.store[aria-pressed="true"] { border-color: var(--green); background: linear-gradient(var(--green-wash), var(--green-wash)), var(--glass-hi); color: var(--green-ink); }
 .pill.dim { opacity: .45; }
 .wires .w.dim { stroke: var(--line-2); opacity: .6; }
-.fv-stores .fv-hub { width: 120px; height: 120px; }
 
 @media (max-width: 640px) {
 }
@@ -556,3 +554,9 @@ button.dg-field:hover { background: rgba(255, 255, 255, .6); }
   .topbar { flex-wrap: wrap; row-gap: 10px; }
   .progress { width: 100%; justify-content: space-between; }
 }
+
+/* One diagram for setup and Overview: stores → tools → Nomix → tags */
+.fv-full { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) auto minmax(0, 1.15fr); column-gap: clamp(28px, 5vw, 72px); }
+.fv-full .fv-hub { width: 104px; height: 104px; }
+.fv-full .pill .p-name { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; }
+.fv-full.is-vertical { row-gap: 44px; }

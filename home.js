@@ -77,7 +77,7 @@
     const vs = (N.real || N.S).versions.length;
     return `<section class="sec" aria-labelledby="sec-ov"><h2 class="sec-h" id="sec-ov">Overview</h2>
       <div class="glass keepcard">
-        ${N.connected().length ? N.storeFlow(store) : '<p class="hint">Your stores show up here as each tool connects.</p>'}
+        ${N.connected().length ? N.storeFlow(store, true) : '<p class="hint">Your stores show up here as each tool connects.</p>'}
         <div class="ov-foot">
           <button type="button" class="link-quiet" id="history-toggle" data-act="history-toggle" aria-expanded="${N.ui.history}">History · ${count(vs, 'version', 'versions')}</button>
           ${N.S.own || N.ui.ownOpen ? '' : '<button type="button" class="link-quiet edit-only" id="own-open" data-act="own-open">I use my own data account</button>'}

@@ -435,7 +435,7 @@
     return {
       wide: true, back: 'dictionary',
       body: `<div class="head center">${N.title('You’re ready')}<p class="lead">${esc(lead)}</p></div>
-        ${N.flowViz()}${p ? '<p class="fv-note">Dashed lines fill in as each tool is connected.</p>' : ''}`,
+        ${N.storeFlow('all', false)}${p ? '<p class="fv-note">Dashed lines fill in as each tool is connected.</p>' : ''}`,
       main: { label: 'Finish setup', act: 'finish' }
     };
   }
