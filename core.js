@@ -165,7 +165,7 @@
   // Turn a plain question into the exact details that answer it.
   N.needFor = text => {
     const q = (text || '').trim().toLowerCase();
-    const known = D.QUESTIONS.find(x => x.text.toLowerCase() === q);
+    const known = N.example(q);
     if (known) return JSON.parse(JSON.stringify(known.need));
     const has = w => (/[^\x00-\x7f]/.test(w) ? q.includes(w)
       : new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(q));
@@ -554,9 +554,16 @@
   N.qRows = () => `<ul class="qrows">${N.S.questions.map(q => `<li id="q-${esc(q.id)}"><span class="q-t">${esc(q.text)}</span>
       <span class="q-k">${esc(N.list(N.orderKeep(Object.keys(q.need)).map(id => N.cat(id).name)) || 'Nomix will go over this one with you')}</span>
       <button type="button" class="x edit-only" data-act="q-remove" data-id="${esc(q.id)}" aria-label="Remove this prompt">${N.icon('x')}</button></li>`).join('')}</ul>`;
+  // An example prompt, typed or tapped in either language.
+  N.example = text => {
+    const t = String(text || '').trim().toLowerCase();
+    return D.QUESTIONS.find(x => x.text.toLowerCase() === t || N.L(x.text).toLowerCase() === t) || null;
+  };
   N.addQuestion = text => {
-    const clean = text.trim().replace(/\s+/g, ' ');
+    let clean = text.trim().replace(/\s+/g, ' ');
     if (!clean) return null;
+    const known = N.example(clean);
+    if (known) clean = known.text;   // saved once, shown in whichever language the page is in
     const exists = N.S.questions.find(q => q.text.toLowerCase().replace(/[?？]$/, '') === clean.toLowerCase().replace(/[?？]$/, ''));
     if (exists) return exists;
     const q = { id: 'q' + Date.now().toString(36) + N.S.questions.length, text: cap(clean), need: N.needFor(clean) };
@@ -612,9 +619,10 @@
   Object.assign(N.acts, {
     // "Try one" puts the question and what it tracks into the box; the owner adds it from there.
     'q-try': d => {
+      const text = N.L(d.text);   // in the viewer's language
       const ta = document.getElementById('q-text');
-      if (ta) { ta.value = d.text; ta.focus(); ta.setSelectionRange(d.text.length, d.text.length); }
-      N.inputs.q(d.text);
+      if (ta) { ta.value = text; ta.focus(); ta.setSelectionRange(text.length, text.length); }
+      N.inputs.q(text);
     },
     'q-add-typed': () => {
       const el = document.getElementById('q-text'), q = N.addQuestion(el ? el.value : N.ui.qDraft);
