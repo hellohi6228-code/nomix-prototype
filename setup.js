@@ -55,7 +55,7 @@
     const on = ctx === 'setup' ? inSel : N.S.pick.includes(t.id);
     const what = inSel && st === 'connected' ? 'Connected' : inSel && st === 'help' ? 'Being set up with you' : N.toolWhat(t);
     return `<button type="button" class="tool" id="tool-${esc(t.id)}" data-act="toggle-tool" data-id="${esc(t.id)}" aria-pressed="${on || locked}"${locked ? ' disabled' : ''}>
-      ${N.mono(t)}<span class="tool-text"><span class="name">${esc(N.toolName(t))}</span><span class="what">${esc(what)}</span></span>
+      ${N.mono(t)}<span class="tool-text"><span class="name">${N.toolNameHtml(t)}</span><span class="what">${esc(what)}</span></span>
       <span class="tick" aria-hidden="true">${N.icon('check')}</span></button>`;
   }
   function addCard(g) {

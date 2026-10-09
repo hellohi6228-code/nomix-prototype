@@ -55,6 +55,7 @@ window.NOMIX_DATA = (function () {
     t('ubereats', 'Uber Eats', 'delivery'),
     t('grubhub', 'Grubhub', 'delivery'),
     t('fantuan', 'Fantuan', 'delivery', { alt: '饭团外卖' }),
+    t('hungrypanda', 'HungryPanda', 'delivery', { alt: '熊猫外卖' }),
     t('olo', 'Olo', 'online'),
     t('chownow', 'ChowNow', 'online'),
     t('deliverect', 'Deliverect', 'hub'),
@@ -287,7 +288,7 @@ window.NOMIX_DATA = (function () {
   const PROVIDERS = ['Snowflake', 'BigQuery', 'Databricks', 'Amazon S3', 'Azure', 'Other'];
 
   // Each vendor's own icon, from its app store listing or website (in logos/).
-  const LOGOS = { "2dfire": '2dfire.jpg', "7shifts": '7shifts.jpg', acewill: 'acewill.jpg', aloha: 'aloha.png', brink: 'brink.png', chowbus: 'chowbus.png', chownow: 'chownow.png', clover: 'clover.png', deliverect: 'deliverect.png', doordash: 'doordash.jpg', douyin: 'douyin.jpg', eleme: 'eleme.png', fantuan: 'fantuan.png', grubhub: 'grubhub.png', keruyun: 'keruyun.png', lightspeed: 'lightspeed.png', "meituan-pos": 'meituan-pos.jpg', "meituan-waimai": 'meituan-waimai.jpg', menusifu: 'menusifu.png', olo: 'olo.png', r365: 'r365.png', revel: 'revel.png', simphony: 'simphony.svg', spoton: 'spoton.jpg', square: 'square.jpg', tcsl: 'tcsl.png', toast: 'toast.jpg', touchbistro: 'touchbistro.png', ubereats: 'ubereats.png', wechat: 'wechat.jpg', yinbao: 'yinbao.jpg' };
+  const LOGOS = { "2dfire": '2dfire.jpg', "7shifts": '7shifts.jpg', acewill: 'acewill.jpg', aloha: 'aloha.png', brink: 'brink.png', chowbus: 'chowbus.png', chownow: 'chownow.png', clover: 'clover.png', deliverect: 'deliverect.png', doordash: 'doordash.jpg', douyin: 'douyin.jpg', eleme: 'eleme.png', fantuan: 'fantuan.png', grubhub: 'grubhub.png', hungrypanda: 'hungrypanda.png', keruyun: 'keruyun.png', lightspeed: 'lightspeed.png', "meituan-pos": 'meituan-pos.jpg', "meituan-waimai": 'meituan-waimai.jpg', menusifu: 'menusifu.png', olo: 'olo.png', r365: 'r365.png', revel: 'revel.png', simphony: 'simphony.svg', spoton: 'spoton.jpg', square: 'square.jpg', tcsl: 'tcsl.png', toast: 'toast.jpg', touchbistro: 'touchbistro.png', ubereats: 'ubereats.png', wechat: 'wechat.jpg', yinbao: 'yinbao.jpg' };
 
   return { GROUPS, KINDS, CUSTOM_KINDS, TOOLS, STREAMS, CATS, TAG_GROUPS, FIELD_WORDS, QUESTIONS, BACKUP_WORDS, COMPANY,
     DISHES, MENUS, OPTIONS, REASONS, MANAGERS, STAFF, STATIONS, FRIDGES, STOCK, DEALS, PROMOS, COMMENTS, RECIPES, WASTE_REASONS, PROVIDERS, LOGOS };

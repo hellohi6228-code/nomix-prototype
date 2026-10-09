@@ -65,6 +65,8 @@
   N.allTools = () => D.TOOLS.concat(N.S.custom);
   N.tool = id => D.TOOLS.find(t => t.id === id) || N.S.custom.find(t => t.id === id) || null;
   N.toolName = t => (t.alt ? `${t.name} / ${t.alt}` : t.name);
+  // "HungryPanda" wraps as Hungry|Panda in a narrow card, never mid-word.
+  N.toolNameHtml = t => esc(N.toolName(t)).replace(/([a-z])([A-Z])/g, '$1<wbr>$2');
   N.toolWhat = t => t.label || D.KINDS[t.kind].label;
   N.groupOf = t => t.group || D.KINDS[t.kind].group;
   N.status = id => (N.S.tools[id] && N.S.tools[id].status) || 'later';

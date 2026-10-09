@@ -157,7 +157,7 @@
     return `<article class="tcard glass" id="tc-${esc(id)}">
       <button type="button" class="tc-head" id="head-${esc(key)}" data-act="toggle-open" data-key="${esc(key)}" aria-expanded="${open}" aria-controls="body-${esc(id)}">
         ${N.mono(t)}
-        <span class="tc-text"><span class="tc-name">${esc(N.toolName(t))}</span>
+        <span class="tc-text"><span class="tc-name">${N.toolNameHtml(t)}</span>
           <span class="tc-what">${esc(N.toolWhat(t))}${stores.length ? ` · ${esc(N.storeList(stores))}` : ''}</span>
           <span class="status">${status}</span></span>
         ${chev()}
