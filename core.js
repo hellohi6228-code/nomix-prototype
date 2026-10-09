@@ -90,7 +90,7 @@
   N.brand = bid => D.COMPANY.brands.find(b => b.id === bid);
   N.brandOf = id => (STORE[id] ? STORE[id].brand : null);
   N.storeLoc = id => (STORE[id] ? STORE[id].loc : id);
-  N.storeName = id => (STORE[id] ? `${STORE[id].brandName} – ${STORE[id].loc}` : id);
+  N.storeName = id => (!id ? 'All stores' : STORE[id] ? `${STORE[id].brandName} – ${STORE[id].loc}` : id);
   // "Umiya: all 18 stores · Surfing Crab: Laredo and Brownsville" (long lists become a count)
   N.storeList = ids => D.COMPANY.brands.map(b => {
     const mine = ids.filter(id => N.brandOf(id) === b.id);
@@ -162,7 +162,7 @@
   N.keepIds = () => N.orderKeep(N.S.questions.flatMap(q => Object.keys(q.need)).concat(N.S.extraKeep));
   N.fieldsOf = id => (N.cat(id).fields || []).slice();
   N.questionsFor = catId => N.S.questions.filter(q => q.need[catId]);
-  N.availCats = () => D.CATS.filter(c => N.S.selected.some(id => { const t = N.tool(id); return t && c.kinds.includes(t.kind); })).map(c => c.id);
+  N.availCats = () => D.CATS.filter(c => N.S.selected.some(id => N.toolFeeds(id, c.id))).map(c => c.id);
 
   // Where a keyword's information comes from right now, for one store or all of them.
   N.sources = (catId, store) => {
@@ -170,7 +170,7 @@
     if (!c || c.custom) return { on, off, custom: true };
     N.S.selected.forEach(id => {
       const t = N.tool(id);
-      if (!t || !c.kinds.includes(t.kind)) return;
+      if (!t || !N.toolFeeds(id, catId)) return;
       if (N.status(id) === 'connected') {
         const st = N.storesOf(id).filter(s => N.inView(s, store));
         if (st.length) on.push({ name: t.name, stores: st });
@@ -416,19 +416,25 @@
   // Every value lands in the shared dictionary, filed under its tag, detail and store.
   const HIST = 12;
   function record(id, ev) {
+    const where = ev.store || '';
     Object.keys(ev.vals).forEach(cat => {
       const byStore = (N.S.latest[cat] = N.S.latest[cat] || {});
-      const row = (byStore[ev.store] = byStore[ev.store] || {});
+      const row = (byStore[where] = byStore[where] || {});
       const h = (N.S.hist[cat] = N.S.hist[cat] || {});
-      Object.keys(ev.vals[cat]).forEach(f => {
-        const e = { v: ev.vals[cat][f], tool: id, store: ev.store, ts: ev.ts };
-        row[f] = { v: e.v, tool: id, ts: e.ts };
+      // One row, or several (a report): the first row ends up newest.
+      const rows = Array.isArray(ev.vals[cat]) ? ev.vals[cat].slice(0, HIST).reverse() : [ev.vals[cat]];
+      rows.forEach(vals => Object.keys(vals).forEach(f => {
+        const e = { v: vals[f], tool: id, store: where, ts: ev.ts };
+        if (!row[f] || row[f].ts <= e.ts) row[f] = { v: e.v, tool: id, ts: e.ts };
         const list = (h[f] = h[f] || []);
-        list.unshift(e);
+        let at = 0;
+        while (at < list.length && list[at].ts > e.ts) at++;
+        list.splice(at, 0, e);
         if (list.length > HIST) list.length = HIST;
-      });
+      }));
     });
   }
+  N.record = record;
   N.fieldNow = (cat, field, store) => {
     const m = N.S.latest[cat];
     if (!m) return null;

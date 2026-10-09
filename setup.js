@@ -379,7 +379,7 @@
   // The tools that fill a tag, in the order the owner connected them.
   const feeders = id => {
     const c = N.cat(id);
-    return c.custom ? [] : N.S.selected.filter(t => N.status(t) === 'connected' && c.kinds.includes(N.tool(t).kind));
+    return c.custom ? [] : N.S.selected.filter(t => N.status(t) === 'connected' && N.toolFeeds(t, c.id));
   };
   function mapCell(toolId, cat, field) {
     const src = ((N.MAP[toolId] || {})[cat] || {})[field];

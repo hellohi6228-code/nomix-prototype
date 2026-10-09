@@ -108,6 +108,7 @@
       <button type="button" class="x" data-act="stream-close" aria-label="Cancel">${N.icon('x')}</button>
     </div>`;
   }
+  const linked = st => st === 'connected' || st === 'waiting' || st === 'error';
   function toolActions(id, t, st) {
     if (N.ui.disconnect === id) {
       const stores = N.storesOf(id);
@@ -116,9 +117,9 @@
         <button type="button" class="btn-quiet" data-act="disconnect-cancel" data-id="${esc(id)}">Cancel</button></div></div>`;
     }
     return `<div class="tc-actions edit-only">
-      ${st === 'connected' ? `<button type="button" class="btn-quiet sm" data-act="stores-edit" data-id="${esc(id)}">Change stores</button>` : ''}
+      ${st === 'connected' && (!N.canEditStores || N.canEditStores(id)) ? `<button type="button" class="btn-quiet sm" data-act="stores-edit" data-id="${esc(id)}">Change stores</button>` : ''}
       ${st === 'later' ? `<button type="button" class="btn-soft" data-act="home-connect" data-id="${esc(id)}">Connect ${esc(t.name)}</button>` : ''}
-      <button type="button" class="btn-quiet sm danger" id="dc-${esc(id)}" data-act="${st === 'connected' ? 'disconnect-ask' : 'tool-remove'}" data-id="${esc(id)}">${st === 'connected' ? 'Disconnect' : 'Remove from list'}</button>
+      <button type="button" class="btn-quiet sm danger" id="dc-${esc(id)}" data-act="${linked(st) ? 'disconnect-ask' : 'tool-remove'}" data-id="${esc(id)}">${linked(st) ? 'Disconnect' : 'Remove from list'}</button>
     </div>`;
   }
   function toolBody(id, t, st, r, store) {
@@ -137,10 +138,12 @@
       body = `<div class="blk"><p>Someone from Nomix will reach out to finish connecting ${esc(t.name)}.</p>
           <p class="meta">Requested ${esc(N.when(r.at))}</p>${r.note ? `<p class="quote">${esc(r.note)}</p>` : ''}</div>
         <div class="blk"><h3>${base.length || extra.length ? 'Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
+    } else if (N.liveBody && (st === 'waiting' || st === 'error')) {
+      body = N.liveBody(id, t, st, r) + `<div class="blk"><h3>${base.length || extra.length ? 'Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
     } else {
       body = `<div class="blk"><h3>${base.length || extra.length ? 'Once connected, Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
     }
-    return body + toolActions(id, t, st);
+    return body + (N.liveExtra ? N.liveExtra(id, t, st, r) : '') + toolActions(id, t, st);
   }
   function toolCard(id, store) {
     const t = N.tool(id), st = N.status(id), r = N.S.tools[id] || {}, key = 'tool:' + id, open = N.S.open === key;
@@ -148,6 +151,8 @@
     const status = st === 'connected'
       ? `<span class="dot ok"></span><span>Working · <span data-ts="${last}" data-last="${esc(id)}" data-pre="Updated ">Updated ${N.rel(last)}</span></span>`
       : st === 'help' ? '<span class="dot help"></span><span>We’re setting this up with you</span>'
+      : st === 'waiting' ? '<span class="dot help"></span><span>Waiting for the first report</span>'
+      : st === 'error' ? '<span class="dot err"></span><span>Needs a new sign-in</span>'
       : '<span class="dot"></span><span>Not connected yet</span>';
     return `<article class="tcard glass" id="tc-${esc(id)}">
       <button type="button" class="tc-head" id="head-${esc(key)}" data-act="toggle-open" data-key="${esc(key)}" aria-expanded="${open}" aria-controls="body-${esc(id)}">
