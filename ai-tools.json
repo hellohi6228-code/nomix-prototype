@@ -2,7 +2,11 @@
   {
     "name": "list_stores",
     "description": "Every store with its id, brand, brand id, time zone and whether it is open now. Use the ids in the other tools' 'where'.",
-    "input_schema": { "type": "object", "properties": {}, "additionalProperties": false }
+    "input_schema": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    }
   },
   {
     "name": "sales",
@@ -10,10 +14,27 @@
     "input_schema": {
       "type": "object",
       "properties": {
-        "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." },
-        "from": { "type": "string", "description": "First day, YYYY-MM-DD. Defaults to today." },
-        "to": { "type": "string", "description": "Last day, YYYY-MM-DD. Defaults to today." },
-        "group": { "type": "string", "enum": ["store", "day", "total"], "description": "One row per store (default), per day, or one total." }
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        },
+        "from": {
+          "type": "string",
+          "description": "First day, YYYY-MM-DD. Defaults to today."
+        },
+        "to": {
+          "type": "string",
+          "description": "Last day, YYYY-MM-DD. Defaults to today."
+        },
+        "group": {
+          "type": "string",
+          "enum": [
+            "store",
+            "day",
+            "total"
+          ],
+          "description": "One row per store (default), per day, or one total."
+        }
       },
       "additionalProperties": false
     }
@@ -24,8 +45,14 @@
     "input_schema": {
       "type": "object",
       "properties": {
-        "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." },
-        "date": { "type": "string", "description": "YYYY-MM-DD. Defaults to today." }
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        },
+        "date": {
+          "type": "string",
+          "description": "YYYY-MM-DD. Defaults to today."
+        }
       },
       "additionalProperties": false
     }
@@ -36,10 +63,22 @@
     "input_schema": {
       "type": "object",
       "properties": {
-        "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." },
-        "from": { "type": "string", "description": "YYYY-MM-DD. Defaults to today." },
-        "to": { "type": "string", "description": "YYYY-MM-DD. Defaults to today." },
-        "limit": { "type": "integer", "description": "How many items, up to 25. Defaults to 10." }
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        },
+        "from": {
+          "type": "string",
+          "description": "YYYY-MM-DD. Defaults to today."
+        },
+        "to": {
+          "type": "string",
+          "description": "YYYY-MM-DD. Defaults to today."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "How many items, up to 25. Defaults to 10."
+        }
       },
       "additionalProperties": false
     }
@@ -49,7 +88,12 @@
     "description": "Today's shifts: who is on, who hasn't clocked in, hours this week and labor cost so far. For one store it lists every shift; for several stores it gives a summary per store.",
     "input_schema": {
       "type": "object",
-      "properties": { "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." } },
+      "properties": {
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        }
+      },
       "additionalProperties": false
     }
   },
@@ -58,7 +102,12 @@
     "description": "Stock on hand from today's count, the par level, and how much is usually used the rest of today. For several stores only low items are listed.",
     "input_schema": {
       "type": "object",
-      "properties": { "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." } },
+      "properties": {
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        }
+      },
       "additionalProperties": false
     }
   },
@@ -67,7 +116,12 @@
     "description": "Latest fridge and freezer readings with their safe ranges, and how many readings were out of range in the last six hours.",
     "input_schema": {
       "type": "object",
-      "properties": { "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." } },
+      "properties": {
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        }
+      },
       "additionalProperties": false
     }
   },
@@ -76,16 +130,26 @@
     "description": "Whether each store is taking orders on each delivery app right now, and orders from each app today.",
     "input_schema": {
       "type": "object",
-      "properties": { "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." } },
+      "properties": {
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        }
+      },
       "additionalProperties": false
     }
   },
   {
-    "name": "need_to_know",
-    "description": "What the store manager's board shows now: problems that need someone right now, and things to plan for today. Empty lists mean nothing needs attention.",
+    "name": "insights",
+    "description": "What the store's insight board shows now: anything that needs someone right now, things to plan for today, and the day's key facts (sales pace, busiest hour ahead, who's on shift). Empty attention lists mean nothing needs attention.",
     "input_schema": {
       "type": "object",
-      "properties": { "where": { "type": "string", "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'." } },
+      "properties": {
+        "where": {
+          "type": "string",
+          "description": "A store id, 'brand:<brand id>', or 'all'. Defaults to 'all'."
+        }
+      },
       "additionalProperties": false
     }
   }

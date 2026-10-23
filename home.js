@@ -256,15 +256,14 @@
 
   N.home = {
     render(app) {
-      const store = N.viewStore(), tab = N.appTab ? N.appTab() : 'data';
-      // Apps (apps.js) get their own tabs; Data is the setup: overview, connections and the dictionary.
-      const data = `${N.appChooser ? N.appChooser() : ''}${overviewSection(store)}<div class="strap-link" aria-hidden="true"></div>
-          ${connectedSection(store)}<div class="strap-link" aria-hidden="true"></div>
-          ${dictSection(store)}`;
-      app.innerHTML = `<div class="home${N.viewing ? ' viewing' : ''}">${viewBar()}${header(store)}${N.appTabs ? N.appTabs(tab) : ''}
+      const store = N.viewStore();
+      // The apps (apps.js) sit as icons under the header and open in place.
+      app.innerHTML = `<div class="home${N.viewing ? ' viewing' : ''}">${viewBar()}${header(store)}${N.appDock ? N.appDock(store) : ''}
         <main class="home-main" aria-labelledby="home-title">
-          ${tab === 'data' ? data : N.appView(tab, store)}
-        </main>${tab === 'data' ? footer() : ''}</div>`;
+          ${overviewSection(store)}<div class="strap-link" aria-hidden="true"></div>
+          ${connectedSection(store)}<div class="strap-link" aria-hidden="true"></div>
+          ${dictSection(store)}
+        </main>${footer()}</div>`;
     },
     sheetScreen() {
       if (N.S.flow && N.S.flow.ctx === 'home') return N.flowView();

@@ -119,6 +119,62 @@
         open: openNow.length, stores: list.length, opensAt: next && next.opensAt, watching, missing };
     };
 
+    /* ---------- The insight board: what needs someone, then the day's few useful facts ---------- */
+    const usd = c => '$' + Math.round(c / 100).toLocaleString('en-US');
+    const hourName = h => (h === 12 ? '12 PM' : h > 12 ? `${h - 12} PM` : `${h} AM`);
+    // Plain words for how today compares; small differences are just "about the same".
+    const pace = (net, usual, day) => {
+      if (!usual) return `${usd(net)} so far`;
+      const d = Math.round((net / usual - 1) * 100);
+      return Math.abs(d) < 5 ? `${usd(net)} so far · about the same as a usual ${day}` : `${usd(net)} so far · ${Math.abs(d)}% ${d > 0 ? 'above' : 'below'} a usual ${day}`;
+    };
+    S.insights = view => {
+      const b = S.board(view), list = storesIn(view), now = src.now(), notes = [];
+      const note = (key, text) => notes.push({ key, text });
+      const sales = list.filter(s => src.has('sales', s.id)), staff = list.filter(s => src.has('staff', s.id));
+      const open = list.filter(s => today(s.id).open);
+      if (list.length === 1) {
+        const s = list[0], t = today(s.id);
+        if (!t.open) {
+          note('closed', `Closed · opens ${hourName(t.opensAt)}`);
+          if (sales.length) { const y = src.dayTotal(s.id, src.dayShift(t.L.day, -1)); note('yesterday', `Yesterday ${usd(y.net)} · ${y.orders} orders`); }
+        } else {
+          if (sales.length) {
+            note('sales', pace(t.net, t.usualNet, t.weekday));
+            const ahead = t.hours.filter(h => h.h > t.L.hour).sort((a, c) => c.usual - a.usual)[0];
+            if (ahead) note('ahead', `Busiest hour ahead is ${hourName(ahead.h)} · usually ${usd(ahead.usual)}`);
+            const top = src.items(s.id, t.net)[0];
+            if (top && top.qty) note('top', `${top.item} leads today · ${top.qty} sold`);
+          }
+          if (staff.length) {
+            const sh = src.shifts(s.id), on = sh.filter(x => x.in && !x.out).length;
+            const soon = sh.filter(x => !x.in && x.start > now && x.start <= now + 3 * HOUR);
+            note('staff', soon.length ? `${on} on shift · ${soon.length} more by ${clock(Math.max(...soon.map(x => x.start)), s.tz)}` : `${on} on shift`);
+          }
+          if (src.has('apps', s.id)) {
+            const apps = src.apps(s.id), taking = apps.filter(a => !a.paused);
+            if (taking.length) note('apps', `${taking.map(a => src.appName(a.app)).join(' and ')} taking orders · ${apps.reduce((n, a) => n + a.ordersToday, 0)} app orders today`);
+          }
+        }
+      } else if (list.length) {
+        if (!open.length) note('closed', `All ${list.length} stores closed`);
+        else if (open.length < list.length) note('closed', `${list.length - open.length} of ${list.length} stores closed now`);
+        if (sales.length) {
+          const ts = sales.map(s => ({ s, t: today(s.id) }));
+          const net = ts.reduce((n, x) => n + x.t.net, 0), usual = ts.reduce((n, x) => n + x.t.usualNet, 0);
+          note('sales', pace(net, usual, ts[0].t.weekday));
+          const best = ts.slice().sort((a, c) => c.t.net - a.t.net)[0];
+          if (best && best.t.net) note('best', `${name(best.s)} has the most so far · ${usd(best.t.net)}`);
+          const tally = {};
+          ts.forEach(x => src.items(x.s.id, x.t.net).forEach(i => { tally[i.item] = (tally[i.item] || 0) + i.net; }));
+          const top = Object.keys(tally).sort((a, c) => tally[c] - tally[a])[0];
+          if (top && tally[top]) note('top', `${top} leads across stores`);
+        }
+        if (staff.length) note('staff', `${staff.reduce((n, s) => n + src.shifts(s.id).filter(x => x.in && !x.out).length, 0)} on shift across ${staff.length} stores`);
+      }
+      return { now: b.now, today: b.today, notes, missing: b.missing, stores: list.length, has: sales.length > 0 || staff.length > 0 || b.watching.length > 0 };
+    };
+
     /* ---------- The dashboard ---------- */
     S.dash = view => {
       const now = src.now(), list = storesIn(view);
@@ -282,10 +338,10 @@
           paused_minutes: a.paused ? Math.round((now - a.since) / MIN) : undefined, orders_today: a.ordersToday })));
         return Object.assign({ apps: ok.length > 1 ? rows.filter(r => r.status !== 'taking orders').concat([{ taking_orders: rows.filter(r => r.status === 'taking orders').length }]) : rows }, nc);
       },
-      need_to_know(input) {
-        const b = S.board((input && input.where) || 'all');
-        const fmt = i => ({ store: i.where, what: i.title, detail: i.detail });
-        return { right_now: b.now.map(fmt), today: b.today.map(fmt), stores_open: b.open, not_watching: b.missing.map(t => S.TAGS[t]) };
+      insights(input) {
+        const w = (input && input.where) || 'all', b = S.board(w), i = S.insights(w);
+        const fmt = x => ({ store: x.where, what: x.title, detail: x.detail });
+        return { needs_attention_now: b.now.map(fmt), to_plan_for_today: b.today.map(fmt), facts: i.notes.map(n => n.text), stores_open: b.open, not_watching: b.missing.map(t => S.TAGS[t]) };
       }
     };
     S.run = (tool, input) => {
