@@ -27,7 +27,6 @@
       body: `<div class="welcome">
         ${heroArt()}
         ${N.title('Let’s connect your restaurant')}
-        <p class="lead">A few simple steps. You can finish the rest later.</p>
         <ol class="how" aria-label="What happens next">
           <li><span class="node"></span>Choose the tools you use</li>
           <li><span class="node"></span>Connect them one at a time</li>
@@ -42,8 +41,7 @@
   const ctxNow = () => (N.S.phase === 'setup' ? 'setup' : 'home');
   N.toolsBody = ctx => {
     const setup = ctx === 'setup';
-    return `<div class="head">${N.title(setup ? 'What do you use?' : 'Connect your tool(s)')}
-        ${setup ? '<p class="lead">Choose the tools you use every day.</p>' : ''}</div>
+    return `<div class="head">${N.title(setup ? 'What do you use?' : 'Connect your tool(s)')}</div>
       <label class="search"><span class="vh">Find a tool</span>${N.icon('search')}
         <input id="tool-search" type="search" placeholder="Find a tool" autocomplete="off" value="${esc(N.ui.search)}" data-input="search"></label>
       <div class="groups" id="tool-groups">${N.toolGroups()}</div>`;
@@ -91,7 +89,7 @@
       const peek = list.filter(t => D.LOGOS[t.id]).slice(0, 5).map(t => `<img src="logos/${D.LOGOS[t.id]}" alt="" decoding="async">`).join('');
       return `<section class="group${open ? ' is-open' : ''}" aria-label="${esc(g.title)}">
         <h2 class="group-h"><button type="button" class="group-toggle" id="grp-${g.id}" data-act="group-open" data-id="${g.id}" aria-expanded="${open}">
-          <span class="gt-text"><span class="gt-title">${esc(g.title)}</span><span class="gt-hint">${esc(g.hint)}</span></span>
+          <span class="gt-text"><span class="gt-title">${esc(g.title)}</span></span>
           ${open ? '' : `<span class="gt-peek" aria-hidden="true">${peek}</span>`}
           <span class="gt-count" id="gc-${g.id}">${esc(groupCount(g.id, list.length))}</span>
           ${N.icon('chev', 'chev')}</button></h2>
@@ -219,22 +217,21 @@
     const f = N.S.flow, id = f.queue[f.i], t = N.tool(id), name = t.name;
     let state = 'idle', h = '', lead = '', extra = '', main = null, sec = null;
     if (f.phase === 'intro' && t.assisted) {
-      state = 'help'; h = 'We’ll set this up with you';
-      lead = `Someone from Nomix will connect ${name} with you.`;
+      state = 'help'; h = `Nomix connects ${name} with you`;
       extra = `<div class="note"><label class="lbl" for="help-note">Anything we should know?<span class="opt">Optional</span></label>
         <textarea id="help-note" data-input="note" placeholder="Like the best time to call">${esc(f.note || '')}</textarea></div>`;
       main = { label: 'Request help', act: 'flow-help' }; sec = { label: 'Do this later', act: 'flow-later' };
     } else if (f.phase === 'intro') {
-      h = `Connect ${name}`; lead = 'Sign in and choose your restaurant.';
+      h = `Connect ${name}`;
       main = { label: `Continue to ${name}`, act: 'flow-go' }; sec = { label: 'Do this later', act: 'flow-later' };
     } else if (f.phase === 'waiting') {
-      state = 'waiting'; h = `Signing in to ${name}`; lead = 'Keep this screen open. It only takes a moment.';
+      state = 'waiting'; h = `Signing in to ${name}`;
       main = { label: `Waiting for ${name}`, busy: true, disabled: true }; sec = { label: 'Cancel', act: 'flow-cancel' };
     } else if (f.phase === 'choose') {
       const found = f.found || [], n = (f.stores || []).length, edit = f.mode === 'stores';
       const count = n === 1 ? '1 store' : n + ' stores';
       h = edit ? `Choose stores for ${name}` : 'Choose your stores';
-      lead = edit ? `Nomix keeps ${name} data from the stores you choose.` : `We found ${found.length} ${found.length === 1 ? 'store' : 'stores'} on ${name}.`;
+      lead = edit ? '' : `${found.length} ${found.length === 1 ? 'store' : 'stores'} on ${name}`;
       // Stores grouped under their brand.
       extra = N.brands().map(b => {
         const mine = found.filter(s => N.brandOf(s) === b.id);
@@ -250,11 +247,10 @@
       main = { label: nextStep(f), act: 'flow-next' };
     } else if (f.phase === 'helped') {
       state = 'help'; h = 'Help is on the way';
-      lead = `Someone from Nomix will reach out to finish connecting ${name}.`;
       main = { label: nextStep(f), act: 'flow-next' };
     }
     const body = `${queueStrip(f)}<div class="connect" aria-live="polite">${linkViz(t, state)}
-      <div class="head">${N.title(h)}<p class="lead">${esc(lead)}</p></div>${extra}</div>`;
+      <div class="head">${N.title(h)}${lead ? `<p class="lead">${esc(lead)}</p>` : ''}</div>${extra}</div>`;
     return { body, main, secondary: sec };
   };
 
@@ -352,7 +348,7 @@
   const WAY_PHASES = ['stores', 'way', 'portal', 'checking', 'send', 'bridge', 'request', 'invite', 'sent'];
   const wayText = (key, id) => {
     const w = D.WAY_INFO[key], n = N.tool(id).name, fill = s => s.replace(/\{tool\}/g, n);
-    return { label: fill(w.label), about: fill(w.about), fresh: w.fresh, go: fill(w.go) };
+    return { label: fill(w.label), fresh: w.fresh, go: fill(w.go) };
   };
   // This tool's form, kept on screen only and never saved (it can hold a password).
   const ff = () => N.ui.ff || (N.ui.ff = {});
@@ -418,7 +414,6 @@ ${today}`;
     const back = { label: 'Back', act: 'way-back' };
     if (f.phase === 'stores') {
       h = `Which stores run ${name}?`;
-      lead = 'Stores on other systems connect those separately.';
       extra = storePicker(picked);
       main = picked.length ? { label: `Continue with ${count(picked.length)}`, act: 'flow-stores-next' } : { label: 'Choose a store', disabled: true };
       if (f.ctx === 'home' && f.mode === 'add') sec = { label: 'Cancel', act: 'sheet-close' };
@@ -429,7 +424,7 @@ ${today}`;
         const w = wayText(k, id);
         return `<button type="button" class="way" data-act="way-pick" data-id="${k}" aria-pressed="${f.way === k}">
           <span class="way-top"><span class="name">${esc(w.label)}</span>${i === 0 ? '<span class="badge">Recommended</span>' : ''}</span>
-          <span class="what">${esc(w.about)}</span><span class="fresh">${esc(w.fresh)}</span>
+          <span class="fresh">${esc(w.fresh)}</span>
           <span class="tick" aria-hidden="true">${N.icon('check')}</span></button>`;
       }).join('')}</div>
         <button type="button" class="link-quiet" data-act="way-invite">Each store’s manager handles ${esc(name)}? Send it to them instead</button>`;
@@ -438,12 +433,11 @@ ${today}`;
     } else if (f.phase === 'portal') {
       h = `Give Nomix its own ${name} login`;
       extra = `<ol class="steps">${((D.WAY_STEPS[id] || {}).portal || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
-        <div class="keyform">${field('user', 'Username or email', { notr: true })}${field('pass', 'Password', { type: 'password', notr: true })}</div>
-        <p class="hint">Nomix keeps this login locked away and only reads reports with it. If ${esc(name)} asks for a code or a check, Nomix stops and tells you.</p>`;
+        <div class="keyform">${field('user', 'Username or email', { notr: true })}${field('pass', 'Password', { type: 'password', notr: true })}</div>`;
       main = { label: `Connect ${name}`, act: 'portal-go', disabled: !((fv.user || '').trim() && fv.pass) };
       sec = back;
     } else if (f.phase === 'checking') {
-      state = 'waiting'; h = `Signing in to ${name}`; lead = 'Checking the login and finding your stores.';
+      state = 'waiting'; h = `Signing in to ${name}`;
       main = { label: `Waiting for ${name}`, busy: true, disabled: true }; sec = null;
     } else if (f.phase === 'send') {
       h = `Have ${name} email its reports here`;
@@ -454,7 +448,6 @@ ${today}`;
       main = { label: 'Done', act: 'send-done' }; sec = back;
     } else if (f.phase === 'bridge') {
       h = `Store Bridge for ${count(picked.length)}`;
-      lead = `We ship one small box to each store. It plugs into the store’s network and is added in ${name} as an extra printer.`;
       extra = `<div class="twocol"><div><span class="lbl">It sees</span><ul class="plain"><li>Every kitchen ticket: items, options, order number, time</li><li>Delivery orders that print in the kitchen</li><li>Receipts when they print: totals, tax, tip, how it was paid</li></ul></div>
         <div><span class="lbl">It misses</span><ul class="plain"><li>Anything that never prints</li><li>Receipts a guest declines (end-of-day reports fill these in)</li></ul></div></div>
         <div class="keyform">${field('contact', 'Who should we call to schedule the installs?')}${field('phone', 'Their phone', { type: 'tel' })}</div>`;
@@ -462,7 +455,6 @@ ${today}`;
       sec = back;
     } else if (f.phase === 'request') {
       h = `Ask ${name} to connect directly`;
-      lead = `${name} answers its own customers. Nomix sends this for you, copies you, and follows up.`;
       const ok = EMAIL.test(fv.amEmail || '') && (fv.signer || '').trim() && (fv.title || '').trim() && fv.agree;
       extra = `<div class="keyform">${field('amEmail', `Your ${name} account manager’s email`, { type: 'email', notr: true })}${field('amName', 'Their first name', { optional: true, notr: true })}
           ${field('signer', 'Your name', { notr: true })}${field('title', 'Your title')}</div>
@@ -473,7 +465,6 @@ ${today}`;
       sec = { label: 'Send it from my own email instead', act: 'request-self' };
     } else if (f.phase === 'invite') {
       h = `Send ${name} to each store’s manager`;
-      lead = 'Each manager gets a link that connects only their store. You’ll see who has finished.';
       extra = `<div class="match">${picked.map(s => `<div class="mrow"><span class="m-text"><span class="name">${esc(N.storeName(s))}</span></span>
           <input class="text-input m-pick" type="email" autocomplete="off" data-notr data-input="ff" data-k="mgr:${esc(s)}" placeholder="Manager’s email" value="${esc(fv['mgr:' + s] || '')}" aria-label="Manager’s email for ${esc(N.storeName(s))}"></div>`).join('')}</div>`;
       const n = picked.filter(s => EMAIL.test(fv['mgr:' + s] || '')).length;
@@ -574,19 +565,19 @@ ${today}`;
       const f = N.S.flow, id = cur(), name = N.tool(id).name;
       const r = setWay(id, 'reports', { status: 'waiting', stores: f.stores.slice() });
       N.commit(`Gave ${name} its Nomix address · ${N.storeList(f.stores)}`);
-      finish('Waiting for the first report', r.status === 'connected' ? 'Reports show up here once the first one arrives.' : `${name} shows as working once its first report arrives.`);
+      finish('Waiting for the first report', '');
     },
     'bridge-go': () => {
       const f = N.S.flow, id = cur(), fv = ff();
       setWay(id, 'bridge', { status: 'bridge', stores: f.stores.slice(), contact: fv.contact.trim(), phone: fv.phone.trim() });
       N.commit(`Requested Store Bridge for ${N.storeList(f.stores)}`);
-      finish(`Store Bridge requested for ${count(f.stores.length)}`, `We’ll call ${fv.contact.trim()} to schedule the installs.`);
+      finish(`Store Bridge requested for ${count(f.stores.length)}`, `We’ll call ${fv.contact.trim()}`);
     },
     'request-go': () => {
       const f = N.S.flow, id = cur(), fv = ff(), name = N.tool(id).name;
       setWay(id, 'request', { status: 'requested', stores: f.stores.slice(), to: fv.amEmail.trim(), signer: fv.signer.trim(), title: fv.title.trim(), sent: 'nomix' });
       N.commit(`Asked ${name} to connect directly · ${N.storeList(f.stores)}`);
-      finish(`Request sent to ${name}`, `Sent to ${fv.amEmail.trim()} with you copied. We’ll follow up and tell you when ${name} replies.`);
+      finish(`Request sent to ${name}`, `Sent to ${fv.amEmail.trim()}`);
     },
     'request-self': () => {
       const f = N.S.flow, id = cur(), fv = ff(), name = N.tool(id).name;
@@ -594,14 +585,14 @@ ${today}`;
       window.location.href = `mailto:${encodeURIComponent(fv.amEmail || '')}?subject=${encodeURIComponent(subject.replace(/^Subject: /, ''))}&body=${encodeURIComponent(rest.join('\n').trim())}`;
       setWay(id, 'request', { status: 'requested', stores: (f.stores || []).slice(), to: fv.amEmail || '', sent: 'self' });
       N.commit(`Asked ${name} to connect directly · ${N.storeList(f.stores || [])}`);
-      finish(`Your email to ${name} is ready`, `Send it from your email app. Nomix will follow up once ${name} replies.`);
+      finish(`Your email to ${name} is ready`, '');
     },
     'invite-go': () => {
       const f = N.S.flow, id = cur(), fv = ff(), name = N.tool(id).name;
       const invites = (f.stores || []).filter(s => EMAIL.test(fv['mgr:' + s] || '')).map(s => ({ store: s, email: fv['mgr:' + s].trim(), done: false }));
       setWay(id, 'invite', { status: 'invited', stores: invites.map(x => x.store), invites });
       N.commit(`Sent ${name} to ${invites.length === 1 ? '1 store manager' : invites.length + ' store managers'}`);
-      finish(`Invites sent to ${invites.length === 1 ? '1 manager' : invites.length + ' managers'}`, `Each manager connects ${name} for their own store. You’ll see each one here as they finish.`);
+      finish(`Invites sent to ${invites.length === 1 ? '1 manager' : invites.length + ' managers'}`, '');
     },
     'copy-text': d => {
       const done = () => N.toast('Copied');
@@ -646,7 +637,7 @@ ${today}`;
       back: 'tools', main,
       body: `<div class="head">${N.title('What would you like to keep track of?')}
           <div class="qwrap"><span class="lbl">Your prompts</span>
-          ${qs.length ? N.qRows() : '<p class="hint">Write one below, tap an example, or pick tags.</p>'}</div></div>
+          ${qs.length ? N.qRows() : ''}</div></div>
         ${N.qBox()}
         ${N.qExamples()}
         ${tagPicker()}`
@@ -685,7 +676,6 @@ ${today}`;
     return `<article class="dcard${open ? ' is-open' : ''}">
       ${N.tagHead(id, 'all', 'h2')}
       ${open ? `<div class="dc-body">
-      <p class="dc-about">${esc(c.about)}</p>
       ${asks.length ? `<p class="tb-asks"><span class="lbl">Answers</span>${asks.map(q => `<span>${esc(q.text)}</span>`).join('')}</p>` : ''}
       <div class="maptable-wrap"><table class="maptable">
         <thead><tr><th scope="col">Nomix field</th><th scope="col">Type</th>${cols}<th scope="col">Latest value</th></tr></thead>
@@ -702,8 +692,8 @@ ${today}`;
     const k = N.keepIds();
     return {
       back: 'track', wide: true,
-      body: `<div class="head">${N.title('Your data dictionary')}<p class="lead">How each tool’s data lines up with Nomix. Every store uses the same fields. Tap a tag to see its fields.</p></div>
-        ${k.length ? `<div class="dict">${k.map(mapTable).join('')}</div>` : '<p class="meta">No tags yet. Go back and write a prompt, or add a tag.</p>'}
+      body: `<div class="head">${N.title('Your data dictionary')}</div>
+        ${k.length ? `<div class="dict">${k.map(mapTable).join('')}</div>` : '<p class="meta">No tags yet</p>'}
         ${N.ui.keepAdding ? N.keepPanel() : `<button type="button" class="adder" data-act="keep-add-open">${N.icon('plus')}Add a tag</button>`}`,
       main: k.length ? { label: 'Looks right', act: 'go', id: 'ready' } : { label: 'Add at least one tag', disabled: true }
     };
@@ -712,17 +702,11 @@ ${today}`;
   /* ---------- 6. Ready ---------- */
   function ready() {
     const c = N.connected(), total = N.S.selected.length, p = total - c.length, stores = N.allStores().length;
-    let lead;
-    if (!total) lead = 'Nomix is set up. Connect your first tool whenever you’re ready.';
-    else {
-      lead = !c.length ? 'Nomix is set up.'
-        : `${c.length === 1 ? N.tool(c[0]).name + ' is' : c.length + ' tools are'} flowing into Nomix from ${stores} ${stores === 1 ? 'store' : 'stores'}.`;
-      if (p) lead += ` ${p} more ${p === 1 ? 'joins' : 'join'} once ${p === 1 ? 'it’s' : 'they’re'} connected.`;
-    }
+    const lead = [c.length ? `${c.length} ${c.length === 1 ? 'tool' : 'tools'} connected` : '', stores ? `${stores} ${stores === 1 ? 'store' : 'stores'}` : '', p ? `${p} still to connect` : ''].filter(Boolean).join(' · ');
     return {
       wide: true, back: 'dictionary',
-      body: `<div class="head center">${N.title('You’re ready')}<p class="lead">${esc(lead)}</p></div>
-        ${N.storeFlow('all', false)}${p ? '<p class="fv-note">Dashed lines fill in as each tool is connected.</p>' : ''}`,
+      body: `<div class="head center">${N.title('You’re ready')}${lead ? `<p class="lead">${esc(lead)}</p>` : ''}</div>
+        ${N.storeFlow('all', false)}`,
       main: { label: 'Finish setup', act: 'finish' }
     };
   }

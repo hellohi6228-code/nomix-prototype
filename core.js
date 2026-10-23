@@ -596,7 +596,7 @@
     const text = N.ui.qDraft.trim();
     if (!text) return '';
     const need = N.needFor(text), cats = N.orderKeep(Object.keys(need));
-    if (!cats.length) return '<p class="qbox-none">Nomix will go over this one with you and set up the details.</p>';
+    if (!cats.length) return '<p class="qbox-none">Set up with you</p>';
     return `<span class="lbl">Nomix will track</span><ul class="qtags">${cats.map(id =>
       `<li><span class="qtag-name">${esc(N.cat(id).name)}</span><span class="qtag-fields">${esc(need[id].join(' · '))}</span></li>`).join('')}</ul>`;
   };
@@ -611,7 +611,7 @@
       `<button type="button" class="chip" data-act="q-try" data-text="${esc(x.text)}">${esc(x.text)}</button>`).join('')}</div></div>` : '';
   };
   N.qRows = () => `<ul class="qrows">${N.S.questions.map(q => `<li id="q-${esc(q.id)}"><span class="q-t">${esc(q.text)}</span>
-      <span class="q-k">${esc(N.list(N.orderKeep(Object.keys(q.need)).map(id => N.cat(id).name)) || 'Nomix will go over this one with you')}</span>
+      <span class="q-k">${esc(N.list(N.orderKeep(Object.keys(q.need)).map(id => N.cat(id).name)) || 'Set up with you')}</span>
       <button type="button" class="x edit-only" data-act="q-remove" data-id="${esc(q.id)}" aria-label="Remove this prompt">${N.icon('x')}</button></li>`).join('')}</ul>`;
   // An example prompt, typed or tapped in either language.
   N.example = text => {

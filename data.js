@@ -294,10 +294,10 @@ window.NOMIX_DATA = (function () {
   // another later. Order = recommended first. (MenuSifu first; more tools join as each is built.)
   const WAYS = { menusifu: ['portal', 'bridge', 'reports', 'request'] };
   const WAY_INFO = {
-    portal: { label: 'Use a {tool} login', about: 'Nomix gets its own login to your {tool} back office, with access to reports only, and reads them throughout the day.', fresh: 'Every 15 minutes', go: 'Add the {tool} login' },
-    bridge: { label: 'Store Bridge', about: 'A small box in each store gets a copy of every kitchen ticket and receipt as it prints. Your printers keep working as they do now.', fresh: 'Live', go: 'Set up Store Bridge' },
-    reports: { label: 'Email reports', about: '{tool} emails its reports to Nomix. Nothing to install.', fresh: 'Once a day', go: 'Get the addresses' },
-    request: { label: 'Ask {tool} to connect directly', about: 'Nomix writes the request, you sign it, and we follow up with {tool} until it’s approved.', fresh: 'Live, once approved', go: 'Write the request' }
+    portal: { label: 'Reports-only {tool} login', fresh: 'Every 15 minutes', go: 'Add the {tool} login' },
+    bridge: { label: 'Store Bridge: a copy of every printed ticket', fresh: 'Live', go: 'Set up Store Bridge' },
+    reports: { label: 'Have {tool} email its reports', fresh: 'Once a day', go: 'Get the addresses' },
+    request: { label: 'Ask {tool} to connect directly', fresh: 'Live, once approved', go: 'Write the request' }
   };
   // What to do in each tool, in the owner's words. Kept to what the tool really offers.
   const WAY_STEPS = {

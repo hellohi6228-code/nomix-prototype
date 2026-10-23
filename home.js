@@ -46,9 +46,9 @@
     if (!v) return '';
     const when = N.whenShort(v.at);
     return `<div class="viewbar" role="region" aria-label="Past version">
-      <div class="vb-text"><strong>Viewing ${esc(when)}</strong><span>${esc(v.label)}. Connections, dictionary and data as they were then.</span></div>
+      <div class="vb-text"><strong>Viewing ${esc(when)}</strong><span>${esc(v.label)}</span></div>
       ${v.confirm
-        ? `<p class="vb-confirm">Go back to this setup? Connections and the data dictionary return to how they were ${esc(N.when(v.at))}. Data Nomix kept since then stays.</p>
+        ? `<p class="vb-confirm">Go back to this setup?</p>
            <div class="row"><button type="button" class="btn-soft" id="vb-yes" data-act="view-restore-confirm">Go back to this version</button><button type="button" class="btn-quiet" data-act="view-restore-cancel">Cancel</button></div>`
         : `<div class="row"><button type="button" class="btn-soft" id="vb-restore" data-act="view-restore">Restore this version</button><button type="button" class="btn-quiet" id="vb-exit" data-act="view-exit">Back to now</button></div>`}
     </div>`;
@@ -68,7 +68,6 @@
       <span class="lbl">Which one do you use?</span>
       <div class="chips">${D.PROVIDERS.map(x => `<button type="button" class="chip" id="own-${esc(x.replace(/\W/g, ''))}" data-act="own-pick" data-id="${esc(x)}" aria-pressed="${p === x}">${esc(x)}</button>`).join('')}</div>
       ${p === 'Other' ? `<label class="vh" for="own-other">Which one?</label><input id="own-other" class="text-input" autocomplete="off" placeholder="Which one?" value="${esc(u.ownOther)}" data-input="own-other">` : ''}
-      ${p ? `<p>Nomix keeps running your data home and also sends a copy to <span id="own-name">${name ? `your ${esc(name)} account` : 'your account'}</span>. We’ll set it up with you.</p>` : ''}
       <div class="row">
         ${p ? `<button type="button" class="btn-soft" id="own-request" data-act="own-request"${name ? '' : ' disabled'}>Request help</button>` : ''}
         <button type="button" class="btn-quiet" data-act="own-close">Never mind</button>
@@ -77,7 +76,7 @@
   }
   function historyList() {
     const vs = (N.real || N.S).versions;
-    if (!vs.length) return '<p class="hint">Each change you make is saved here, so you can look back or go back.</p>';
+    if (!vs.length) return '<p class="meta">No versions yet</p>';
     return `<ol class="history">${vs.map((v, k) => {
       const here = N.viewing && N.viewing.id === v.id;
       return `<li${here ? ' class="is-here"' : ''}><span class="h-when">${esc(N.whenShort(v.at))}${k === 0 ? ' · Latest' : ''}</span><span class="h-what">${esc(v.label)}</span>
@@ -88,7 +87,7 @@
     const vs = (N.real || N.S).versions.length;
     return `<section class="sec" aria-labelledby="sec-ov"><h2 class="sec-h" id="sec-ov">Overview</h2>
       <div class="glass keepcard">
-        ${N.connected().length ? N.storeFlow(store, true) : '<p class="hint">Your stores show up here as each tool connects.</p>'}
+        ${N.connected().length ? N.storeFlow(store, true) : '<p class="meta">No stores yet</p>'}
         <div class="ov-foot">
           <button type="button" class="link-quiet" id="history-toggle" data-act="history-toggle" aria-expanded="${N.ui.history}">History · ${count(vs, 'version', 'versions')}</button>
           ${N.S.own || N.ui.ownOpen ? '' : '<button type="button" class="link-quiet edit-only" id="own-open" data-act="own-open">I use my own data account</button>'}
@@ -112,7 +111,7 @@
   function toolActions(id, t, st) {
     if (N.ui.disconnect === id) {
       const stores = N.storesOf(id);
-      return `<div class="confirm edit-only"><p>Disconnect ${esc(t.name)}? Nomix stops receiving from it${stores.length ? ` at ${esc(N.storeList(stores))}` : ''}. What it already sent stays, and History can bring this setup back.</p>
+      return `<div class="confirm edit-only"><p>Disconnect ${esc(t.name)}?</p>
         <div class="row"><button type="button" class="btn-soft danger" id="dc-yes" data-act="disconnect" data-id="${esc(id)}">Disconnect ${esc(t.name)}</button>
         <button type="button" class="btn-quiet" data-act="disconnect-cancel" data-id="${esc(id)}">Cancel</button></div></div>`;
     }
@@ -135,8 +134,7 @@
         <div class="blk"><h3>Most recent${store === 'all' ? '' : ` at ${esc(N.viewName(store))}`}</h3><ul class="feed" data-feed="${esc(id)}">${feed.map(ev => N.feedItem(ev)).join('')}</ul></div>
         <p class="meta">Connected ${esc(N.when(r.at))}</p>`;
     } else if (st === 'help') {
-      body = `<div class="blk"><p>Someone from Nomix will reach out to finish connecting ${esc(t.name)}.</p>
-          <p class="meta">Requested ${esc(N.when(r.at))}</p>${r.note ? `<p class="quote">${esc(r.note)}</p>` : ''}</div>
+      body = `<div class="blk"><p class="meta">Requested ${esc(N.when(r.at))}</p>${r.note ? `<p class="quote">${esc(r.note)}</p>` : ''}</div>
         <div class="blk"><h3>${base.length || extra.length ? 'Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
     } else if (r.ways && st !== 'connected') {
       body = `<div class="blk"><h3>${base.length || extra.length ? 'Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
@@ -180,7 +178,7 @@
     return `<section class="sec" aria-labelledby="sec-tools"><h2 class="sec-h" id="sec-tools">Connected</h2>
       <div class="stack">
         ${list.length ? list.map(id => toolCard(id, store)).join('')
-          : `<div class="glass empty-card"><p class="meta">${N.S.selected.length ? 'Nothing connected matches this filter.' : 'No tools yet. Connect the ones you use every day.'}</p></div>`}
+          : `<div class="glass empty-card"><p class="meta">${N.S.selected.length ? 'Nothing connected matches this filter.' : 'No tools yet'}</p></div>`}
         <button type="button" class="adder edit-only" id="pick-open" data-act="pick-open">${N.icon('plus')}Connect your tool(s)</button>
       </div></section>`;
   }
@@ -220,7 +218,7 @@
     if (!N.tagOpen(id) && N.focusKey() !== 'tag:' + id) return `<div class="dg">${N.tagHead(id, store, 'h3')}</div>`;
     return `<div class="dg is-open">
       ${N.tagHead(id, store, 'h3')}
-      ${rows ? `<ul class="dg-fields">${rows}</ul>` : '<p class="meta">No fields yet. Add the first one.</p>'}
+      ${rows ? `<ul class="dg-fields">${rows}</ul>` : '<p class="meta">No fields yet</p>'}
       ${adding ? `<div class="inline-add edit-only">
           <label class="vh" for="field-new-${esc(id)}">Add a field to ${esc(c.name)}</label>
           <input id="field-new-${esc(id)}" class="text-input" autocomplete="off" placeholder="Like “Table number”" data-input="enable-next" data-enter="field-add" data-id="${esc(id)}">
@@ -245,26 +243,28 @@
         ${qs.length ? `<div class="qwrap"><span class="lbl">Your prompts</span>${N.qRows()}</div>` : ''}
         ${N.ui.asking ? askBox() : (busy ? '' : `<button type="button" class="adder sm edit-only" id="ask-open" data-act="ask-open">${N.icon('plus')}Write a prompt</button>`)}
         <span class="lbl dict-lbl">Tags</span>
-        ${k.length ? `<div class="dict-clean">${k.map(id => dictGroup(id, store)).join('')}</div>` : '<p class="hint">No tags yet. Write a prompt or add a tag.</p>'}
+        ${k.length ? `<div class="dict-clean">${k.map(id => dictGroup(id, store)).join('')}</div>` : '<p class="meta">No tags yet</p>'}
         ${N.ui.keepAdding ? N.keepPanel() : (busy ? '' : `<button type="button" class="adder sm edit-only" data-act="keep-add-open">${N.icon('plus')}Add a tag</button>`)}
       </div></section>`;
   }
 
   function footer() {
     return `<footer class="foot edit-only">${N.ui.resetAsk
-      ? '<span>Start over? This clears your tools, choices and history.</span><button type="button" class="btn-quiet" id="reset-yes" data-act="reset-yes">Start over</button><button type="button" class="btn-quiet" data-act="reset-no">Keep everything</button>'
+      ? '<span>Start over?</span><button type="button" class="btn-quiet" id="reset-yes" data-act="reset-yes">Start over</button><button type="button" class="btn-quiet" data-act="reset-no">Keep everything</button>'
       : '<button type="button" class="link-quiet" id="reset-ask" data-act="reset-ask">Set up again</button>'}</footer>`;
   }
 
   N.home = {
     render(app) {
-      const store = N.viewStore();
-      app.innerHTML = `<div class="home${N.viewing ? ' viewing' : ''}">${viewBar()}${header(store)}
-        <main class="home-main" aria-labelledby="home-title">
-          ${overviewSection(store)}<div class="strap-link" aria-hidden="true"></div>
+      const store = N.viewStore(), tab = N.appTab ? N.appTab() : 'data';
+      // Apps (apps.js) get their own tabs; Data is the setup: overview, connections and the dictionary.
+      const data = `${N.appChooser ? N.appChooser() : ''}${overviewSection(store)}<div class="strap-link" aria-hidden="true"></div>
           ${connectedSection(store)}<div class="strap-link" aria-hidden="true"></div>
-          ${dictSection(store)}
-        </main>${footer()}</div>`;
+          ${dictSection(store)}`;
+      app.innerHTML = `<div class="home${N.viewing ? ' viewing' : ''}">${viewBar()}${header(store)}${N.appTabs ? N.appTabs(tab) : ''}
+        <main class="home-main" aria-labelledby="home-title">
+          ${tab === 'data' ? data : N.appView(tab, store)}
+        </main>${tab === 'data' ? footer() : ''}</div>`;
     },
     sheetScreen() {
       if (N.S.flow && N.S.flow.ctx === 'home') return N.flowView();
