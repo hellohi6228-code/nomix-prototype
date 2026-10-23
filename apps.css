@@ -55,7 +55,6 @@ button.nk-row:hover { background: rgba(255, 255, 255, .6); }
 .nk-ev { list-style: none; margin: 0; padding: 0 16px 14px 39px; display: grid; gap: 2px; color: var(--ink-2); font-size: var(--t-small); font-variant-numeric: tabular-nums; }
 .dot.warn { background: var(--amber); box-shadow: 0 0 0 4px var(--amber-wash); }
 .dot.plan { background: var(--idle); box-shadow: 0 0 0 4px rgba(182, 189, 184, .25); }
-.nk-row .nk-ic { flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--green-ink); }
 .chip.static { cursor: default; min-height: 30px; padding: 0 12px; font-size: var(--t-small); font-weight: 600; color: var(--ink-2); background: transparent; }
 .chip.static:hover { border-color: var(--line-2); }
 
@@ -117,30 +116,8 @@ ol.dlist li .dl-n::before { counter-increment: n; content: counter(n) "  "; colo
 .dtable th[scope="row"] .link-quiet { min-height: 0; padding: 0; font-size: var(--t-small); color: var(--ink); }
 .dtable td { font-variant-numeric: tabular-nums; }
 
-/* Chat: a button in the corner and a box that floats above the page */
-#chat-root { position: relative; z-index: 40; }
-.chat-fab {
-  position: fixed; right: max(20px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); z-index: 41;
-  width: 60px; height: 60px; border-radius: 50%; border: 0; cursor: pointer; display: grid; place-items: center;
-  background: var(--green-ink); color: var(--on-accent); box-shadow: 0 14px 30px -10px rgba(58, 125, 90, .7), 0 2px 6px rgba(35, 48, 41, .15);
-  transition: transform .15s, background .2s;
-}
-.chat-fab:hover { background: var(--green-ink-hover); transform: translateY(-2px); }
-.chat-fab svg { width: 26px; height: 26px; }
-.chatpanel {
-  position: fixed; right: 20px; bottom: 92px; z-index: 41; width: min(400px, calc(100vw - 32px)); height: min(600px, calc(100vh - 120px));
-  display: grid; grid-template-rows: auto 1fr auto; border-radius: var(--r-lg); overflow: hidden;
-  background: rgba(251, 250, 247, .94); border: 1px solid var(--glass-edge); box-shadow: var(--shadow-lift);
-  -webkit-backdrop-filter: blur(24px) saturate(150%); backdrop-filter: blur(24px) saturate(150%);
-  animation: chat-rise .2s ease-out;
-}
-@keyframes chat-rise { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
-.cp-head { display: flex; align-items: center; gap: 4px; padding: 8px 8px 8px 16px; border-bottom: 1px solid var(--line); }
-.cp-title { display: inline-flex; align-items: center; gap: 8px; font: 650 1.0625rem/1 var(--f-display); }
-.cp-title svg { width: 20px; height: 20px; color: var(--green-ink); }
-.cp-where { flex: 1; min-width: 0; margin-left: 6px; color: var(--ink-3); font-size: var(--t-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cp-head .x { width: 40px; height: 40px; }
-.cp-body { overflow-y: auto; padding: 14px; display: grid; align-content: start; gap: 12px; }
+/* Chat, opened in place from its icon */
+.cp-body { max-height: min(60vh, 560px); overflow-y: auto; display: grid; align-content: start; gap: 12px; padding: 2px; }
 .cp-off { display: flex; align-items: center; gap: 10px; margin: 0; padding: 14px; border-radius: var(--r-md); background: var(--amber-wash); color: var(--amber-ink); font-weight: 650; }
 .cp-off svg { width: 20px; height: 20px; flex: none; }
 .chat-starters .chip { min-height: 38px; font-size: var(--t-small); }
@@ -158,7 +135,7 @@ ol.dlist li .dl-n::before { counter-increment: n; content: counter(n) "  "; colo
 .msg-status { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: var(--t-small); }
 .msg-status .spin { width: 14px; height: 14px; border-width: 2px; }
 .msg-err { color: var(--amber-ink); font-size: var(--t-small); font-weight: 600; }
-.chat-box { display: flex; align-items: flex-end; gap: 8px; margin: 10px; padding: 4px 4px 4px 10px; border-radius: 24px; background: var(--glass-hi); border: 1.5px solid var(--line-2); }
+.chat-box { display: flex; align-items: flex-end; gap: 8px; margin: 0; padding: 4px 4px 4px 10px; border-radius: 24px; background: var(--glass-hi); border: 1.5px solid var(--line-2); }
 .chat-box:focus-within { border-color: var(--green); box-shadow: 0 0 0 4px var(--green-wash); }
 .chat-box textarea { flex: 1; min-height: 42px; max-height: 140px; padding: 10px 4px; border: 0; background: transparent; resize: none; outline: none; font-size: 1rem; color: var(--ink); }
 .chat-box textarea::placeholder { color: var(--ink-3); }
@@ -167,7 +144,6 @@ ol.dlist li .dl-n::before { counter-increment: n; content: counter(n) "  "; colo
 
 @media (max-width: 520px) {
   .dgrid { grid-template-columns: minmax(0, 1fr); }
-  .chatpanel { right: 8px; left: 8px; width: auto; bottom: 84px; height: calc(100vh - 110px); }
 }
 
 /* Store filter: a brand's stores fold into one chip */
@@ -177,7 +153,7 @@ ol.dlist li .dl-n::before { counter-increment: n; content: counter(n) "  "; colo
 
 /* The model in the chat header */
 .cp-model {
-  appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 62%;
+  appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; justify-self: start;
   min-height: 40px; padding: 0 10px 0 6px; border-radius: 999px; border: 1.5px solid var(--line-2); background: var(--glass-hi); color: var(--ink);
   font-weight: 650; font-size: var(--t-small);
 }
@@ -185,7 +161,6 @@ ol.dlist li .dl-n::before { counter-increment: n; content: counter(n) "  "; colo
 .cp-mname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cp-model .chev { width: 14px; height: 14px; flex: none; color: var(--ink-3); }
 .bmono { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--green-wash); color: var(--green-ink); font-weight: 750; font-size: .8125rem; }
-.cp-head { padding-left: 10px; }
 
 /* Choosing a model */
 .mp-loading { display: grid; place-items: center; padding: 40px 0; color: var(--ink-3); }
@@ -215,20 +190,35 @@ ol.dlist li .dl-n::before { counter-increment: n; content: counter(n) "  "; colo
 .mp-tray .x { width: 30px; height: 30px; }
 .btn-soft.sm { min-height: 36px; padding: 0 14px; font-size: var(--t-small); }
 
-/* Comparing models */
-.cmp-prompts { display: grid; gap: 6px; }
-.cmp-p { display: flex; align-items: center; gap: 10px; font-weight: 600; }
-.cmp-p input { width: 20px; height: 20px; accent-color: var(--green-ink); flex: none; }
-.cmp-runs .chip { min-height: 34px; }
-.cmp-scroll { overflow-x: auto; margin: 0 -4px; padding: 0 4px 6px; }
-.cmp-grid { display: grid; grid-template-columns: repeat(var(--n), minmax(260px, 1fr)); gap: 10px; min-width: min-content; }
-.cmp-corner { display: none; }
-.cmp-model { display: grid; gap: 4px; align-content: start; justify-items: start; padding: 12px 14px; border-radius: var(--r-md); background: var(--glass-hi); border: 1px solid var(--line); position: sticky; top: 0; }
-.cmp-mname { font-weight: 700; }
-.cmp-prompt { grid-column: 1 / -1; margin-top: 8px; font-weight: 650; color: var(--ink-2); }
-.cmp-cell { display: grid; gap: 8px; align-content: start; padding: 12px 14px; border-radius: var(--r-md); background: rgba(255, 255, 255, .7); border: 1px solid var(--line); font-size: .9375rem; line-height: 1.45; min-width: 0; overflow-wrap: anywhere; }
-.cmp-cell .msg-body p { margin: 0 0 6px; }
-.cmp-cell .msg-body ul, .cmp-cell .msg-body ol { margin: 0 0 6px; padding-left: 1.2em; }
-.cmp-time { color: var(--ink-3); font-size: var(--t-tiny); font-weight: 650; font-variant-numeric: tabular-nums; }
-/* A sheet (choosing a model, connecting a tool) covers the chat corner */
-body.locked #chat-root { display: none; }
+/* Comparing models: one question at a time, answers stacked, made for phones */
+.cmp-steps { display: flex; align-items: center; gap: 8px; }
+.cmp-dot {
+  appearance: none; cursor: pointer; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--line-2); background: var(--glass-hi); color: var(--ink-2); font-weight: 700; font-size: .875rem;
+}
+.cmp-dot svg { width: 16px; height: 16px; }
+.cmp-dot.done { border-color: var(--green); color: var(--green-ink); background: var(--green-wash); }
+.cmp-dot[aria-current="true"] { border-color: var(--green-ink); background: var(--green-ink); color: #fff; }
+.cmp-dot:disabled { cursor: default; opacity: .45; }
+.cmp-q { margin: 0; justify-self: end; max-width: 90%; padding: 10px 14px; border-radius: 18px 18px 6px 18px; background: var(--green-ink); color: var(--on-accent); font-weight: 600; line-height: 1.4; }
+.cmp-cards, .cmp-results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.cmp-card { display: grid; gap: 10px; padding: 14px; border-radius: var(--r-md); background: var(--glass-hi); border: 1.5px solid var(--line); line-height: 1.45; min-width: 0; overflow-wrap: anywhere; }
+.cmp-card.chosen { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-wash); }
+.cmp-top { display: flex; align-items: center; gap: 8px; }
+.cmp-mname { font-weight: 700; min-width: 0; }
+.cmp-time { margin-left: auto; color: var(--ink-3); font-size: var(--t-tiny); font-weight: 650; font-variant-numeric: tabular-nums; }
+.cmp-card .msg-body p { margin: 0 0 6px; }
+.cmp-card .msg-body ul, .cmp-card .msg-body ol { margin: 0 0 6px; padding-left: 1.2em; }
+.cmp-pick { width: 100%; min-height: 44px; }
+.cmp-pick svg { width: 18px; height: 18px; }
+.cmp-res { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: var(--r-md); background: var(--glass-hi); border: 1.5px solid var(--line); }
+.cmp-res.top { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-wash); }
+.cmp-rtext { display: grid; gap: 2px; min-width: 0; flex: 1; }
+
+/* Choosing brands and stores: any mix */
+.chip.brand[aria-pressed="mixed"] { border-color: var(--green); border-style: dashed; color: var(--green-ink); background: transparent; }
+.sb-stores { display: grid; gap: 12px; padding: 12px; border-radius: var(--r-md); background: var(--glass); border: 1px solid var(--glass-edge); }
+.sb-group { display: grid; gap: 6px; }
+.sb-group .sb-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.sb-group .chip { min-height: 38px; padding: 0 14px; font-size: var(--t-small); }
+.sb-fold { justify-self: start; gap: 6px; }

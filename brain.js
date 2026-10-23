@@ -20,7 +20,8 @@
     const S = {};
     const stores = () => src.stores();
     const store = id => stores().find(s => s.id === id);
-    const inView = (s, view) => !view || view === 'all' || view === s.id || view === 'brand:' + s.brand;
+    const inView = (s, view) => !view || view === 'all' || view === s.id || view === 'brand:' + s.brand
+      || (view.startsWith('set:') && view.slice(4).split(',').includes(s.id));
     const storesIn = view => stores().filter(s => inView(s, view));
     const name = s => `${s.brandName} – ${s.loc}`;
     const clock = (ts, tz) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: tz });

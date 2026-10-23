@@ -56,7 +56,7 @@
     'Finish setup': '完成设置', 'Your tools': '您的工具',
     // Home
     'Your restaurant': '您的餐厅', 'No tools connected yet': '还没有连接工具', 'Choose a store': '选择一家门店',
-    'Overview': '总览', 'Connected': '已连接', 'Data dictionary': '数据字典',
+    'Overview': '总览', 'Data map': '数据地图', 'Connected': '已连接', 'Data dictionary': '数据字典',
     'Your stores show up here as each tool connects.': '每连接一个工具,您的门店就会显示在这里。',
     'I use my own data account': '我使用自己的数据账户',
     'Each change you make is saved here, so you can look back or go back.': '您的每次更改都会保存在这里,可随时回看或恢复。',
@@ -224,6 +224,10 @@
     'Clock-ins and clock-outs': '上下班打卡', 'Every report it sends, filed under your tags': '它发送的每一份报表,按您的标签归档',
     'Shift scheduled': '已排班',
     // Apps
+    "Pick this": "选这个",
+    "Results": "结果",
+    "Choose stores": "选择门店",
+    "Choose brands or stores": "选择品牌或门店",
     "Chat model": "对话模型",
     "Compare models": "比较模型",
     "Current": "当前",
@@ -419,6 +423,9 @@
     [/^(\d+) waiting for you$/, (m, a) => `${a} 个待您连接`],
     [/^(\d+) being set up with you$/, (m, a) => `${a} 个正在与您一起设置`],
     // Apps
+    [/^Use (.+) for Chat$/, (m, a) => `对话使用 ${a}`],
+    [/^(\d+) of (\d+) picks$/, (m, a, b) => `${b} 次中选了 ${a} 次`],
+    [/^(.+) \+ (\d+) stores$/, (m, a, b) => `${a} + ${b} 家门店`],
     [/^Compare (\d) models$/, (m, a) => `比较 ${a} 个模型`],
     [/^Run again · (\d) left$/, (m, a) => `再运行一次 · 还剩 ${a} 次`],
     [/^Run (\d)$/, (m, a) => `第 ${a} 次`],

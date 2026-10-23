@@ -38,7 +38,7 @@
   const where = view => (view === 'all' ? 'All stores' : N.viewName(view));
 
   /* ---------- The two icons on home, each opening in place ---------- */
-  const APPS = [{ id: 'insights', name: 'Insights' }, { id: 'dash', name: 'Dashboard' }];
+  const APPS = [{ id: 'insights', name: 'Insights' }, { id: 'dash', name: 'Dashboard' }, { id: 'chat', name: 'Chat' }];
   N.appDock = view => {
     if (!ready()) return '';
     const open = N.S.appOpen;
@@ -46,11 +46,10 @@
     const btn = a => `<button type="button" class="dock-btn" id="dock-${a.id}" data-act="app-open" data-id="${a.id}" aria-expanded="${open === a.id}" aria-controls="app-view">
         <span class="dock-ic">${ic(a.id)}${a.id === 'insights' && count ? `<span class="dock-badge" aria-label="${count} need attention">${count}</span>` : ''}</span><span class="dock-l">${esc(a.name)}</span></button>`;
     return `<div class="dock" role="group" aria-label="Apps">${APPS.map(btn).join('')}</div>
-      ${open ? `<div id="app-view" class="app-panel" data-app="${open}">${open === 'insights' ? insightsView(view) : dashView(view)}</div>` : ''}`;
+      ${open ? `<div id="app-view" class="app-panel" data-app="${open}">${open === 'insights' ? insightsView(view) : open === 'dash' ? dashView(view) : chatView(view)}</div>` : ''}`;
   };
 
   /* ---------- Insights ---------- */
-  const NOTE_ICON = { sales: 'sales', ahead: 'clock', staff: 'people', top: 'star', apps: 'bag', best: 'star', closed: 'moon', yesterday: 'sales' };
   function insightsView(view) {
     const b = B.insights(view), open = N.ui.nkOpen || [], multi = b.stores > 1;
     const item = it => {
@@ -65,7 +64,7 @@
     // The day's facts sit in the same boxes: the first part bold, the rest underneath.
     const fact = n => {
       const [t, ...rest] = n.text.split(' · ');
-      return `<li class="nk-item"><div class="nk-row">${ic(NOTE_ICON[n.key] || 'check', 'nk-ic')}<span class="nk-text">
+      return `<li class="nk-item"><div class="nk-row"><span class="dot plan"></span><span class="nk-text">
         <span class="nk-t">${esc(t)}</span>${rest.length ? `<span class="nk-d">${esc(rest.join(' · '))}</span>` : ''}</span></div></li>`;
     };
     const act = b.now.concat(b.today);
@@ -257,22 +256,16 @@
   const bubble = (m, k) => m.who === 'me'
     ? `<li class="msg me" data-notr>${esc(m.text)}</li>`
     : `<li class="msg ai" id="msg-${k}"><div class="msg-body" data-notr>${md(m.text)}</div>${m.status ? `<span class="msg-status"><span class="spin" aria-hidden="true"></span>${esc(m.status)}</span>` : ''}${m.error ? `<span class="msg-err">${esc(m.error)}</span>` : ''}</li>`;
-  let root = null;
-  function chatRoot() {
-    if (!root) { root = document.createElement('div'); root.id = 'chat-root'; document.body.appendChild(root); }
-    return root;
-  }
   const isOff = () => chat.providers && !chat.providers[routeOf(chatModel().id)];
   const mono = brand => `<span class="bmono" aria-hidden="true">${esc(String(brand || '?').charAt(0))}</span>`;
-  function panel() {
+  const chatOpen = () => N.S.appOpen === 'chat';
+  // Chat opens from its icon, in place, like the other apps.
+  function chatView(view) {
     const starters = N.S.questions.map(q => q.text).concat(STARTERS).filter((x, i, a) => a.indexOf(x) === i).slice(0, 5);
     const off = isOff(), m = chatModel();
-    return `<section class="chatpanel" role="dialog" aria-label="Chat">
-      <header class="cp-head">
-        <button type="button" class="cp-model" id="cp-model" data-act="model-open" aria-haspopup="dialog">${mono(m.brand)}<span class="cp-mname" data-notr>${esc(m.name)}</span>${N.icon('chev', 'chev')}</button>
-        <span class="cp-where" id="cp-where">${esc(where(N.viewStore()))}</span>
-        ${chat.view.length ? `<button type="button" class="x" data-act="chat-new" aria-label="New chat">${ic('fresh')}</button>` : ''}
-        <button type="button" class="x" id="chat-close" data-act="chat-toggle" aria-label="Close">${ic('x')}</button></header>
+    return `<div class="panel-head"><h2 class="panel-h">${esc(where(view))}</h2>
+        ${chat.view.length ? `<button type="button" class="x" data-act="chat-new" aria-label="New chat">${ic('fresh')}</button>` : ''}</div>
+      <button type="button" class="cp-model" id="cp-model" data-act="model-open" aria-haspopup="dialog">${mono(m.brand)}<span class="cp-mname" data-notr>${esc(m.name)}</span>${N.icon('chev', 'chev')}</button>
       <div class="cp-body" id="cp-body">
         ${off ? `<p class="cp-off">${ic('chat')}<span>Chat isn’t switched on yet</span></p>` : ''}
         ${!off && !chat.view.length ? `<div class="chips chat-starters">${starters.map(s => `<button type="button" class="chip" data-act="chat-ask" data-text="${esc(s)}">${esc(s)}</button>`).join('')}</div>` : ''}
@@ -282,28 +275,17 @@
         <label class="vh" for="chat-input">Ask about your stores</label>
         <textarea id="chat-input" rows="1" data-input="chat" data-enter="chat-send" placeholder="Ask about your stores"${off ? ' disabled' : ''}>${esc(chat.draft)}</textarea>
         <button type="button" class="btn-main sm" id="chat-send" data-act="chat-send" aria-label="Send"${chat.busy || off ? ' disabled' : ''}>${ic('send')}</button>
-      </div></section>`;
+      </div>`;
   }
-  // Draw the chat corner: the button always (on home), the box when open.
+  // Redraw only the chat panel; the rest of home stays as it is.
   function paintChat(focus) {
-    const r = chatRoot();
-    if (!ready()) { r.innerHTML = ''; return; }
-    r.innerHTML = `${N.ui.chatOpen ? panel() : ''}
-      <button type="button" class="chat-fab" id="chat-fab" data-act="chat-toggle" aria-expanded="${!!N.ui.chatOpen}" aria-label="${N.ui.chatOpen ? 'Close chat' : 'Chat'}">${ic(N.ui.chatOpen ? 'x' : 'chat')}</button>`;
+    const v = document.getElementById('app-view');
+    if (!v || v.dataset.app !== 'chat') return;
+    v.innerHTML = chatView(N.viewStore());
     const body = document.getElementById('cp-body');
     if (body) body.scrollTop = body.scrollHeight;
-    if (focus) { const el = document.getElementById(focus); if (el) el.focus(); }
+    if (focus) { const el = document.getElementById(focus); if (el) el.focus({ preventScroll: true }); }
   }
-  // Home redraws itself often; the chat corner is only redrawn when it has to be.
-  const render = N.render;
-  N.render = o => {
-    render(o);
-    const r = chatRoot();
-    if (!ready()) { if (r.innerHTML) r.innerHTML = ''; return; }
-    if (!r.innerHTML) paintChat();
-    const w = document.getElementById('cp-where');
-    if (w) w.textContent = N.L(where(N.viewStore()));
-  };
   function paintMsg(k) {
     const el = document.getElementById('msg-' + k);
     if (el) el.outerHTML = bubble(chat.view[k], k);
@@ -315,7 +297,7 @@
       const r = await fetch(RELAY() + '/health');
       chat.providers = r.ok ? (await r.json()).providers || {} : {};
     } catch (e) { chat.providers = {}; }
-    if (N.ui.chatOpen) paintChat('chat-input');
+    if (chatOpen()) paintChat();
   }
   async function ask(text) {
     if (chat.busy || !text.trim() || isOff()) return;
@@ -337,17 +319,14 @@
       rewind(chat.api);
     }
     m.status = ''; chat.busy = false;
-    if (N.ui.chatOpen) { paintMsg(k); const b = document.getElementById('chat-send'); if (b) b.disabled = !!isOff(); }
+    if (chatOpen()) { paintMsg(k); const b = document.getElementById('chat-send'); if (b) b.disabled = !!isOff(); }
   }
   N.inputs.chat = v => { chat.draft = v; };
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && N.ui.chatOpen && !document.querySelector('.sheet')) { N.ui.chatOpen = false; paintChat('chat-fab'); }
-  });
 
   /* ---------- Choosing the model: brand, then model; or compare a few on set prompts ---------- */
   const COMPARE_PROMPTS = ['Anything I need to know right now?', 'How did each store do yesterday?', 'Which dishes sold best this week?'];
   const RUNS = 3;
-  const mp = () => N.ui.mp || (N.ui.mp = { phase: 'pick', brand: null, picked: [], all: false, prompts: COMPARE_PROMPTS.slice(), runs: [], run: 0, busy: false });
+  const mp = () => N.ui.mp || (N.ui.mp = { phase: 'pick', brand: null, picked: [], all: false, runs: [], step: 0 });
   let catalog = null, loading = null;
   function loadCatalog() {
     if (catalog || loading) return loading;
@@ -382,65 +361,98 @@
         ${!s.all && brand.models.length > 8 ? `<button type="button" class="link-quiet" data-act="model-all">Show all ${brand.models.length}</button>` : ''}</div>
       ${s.picked.length ? `<div class="mp-tray"><span class="lbl">Picked</span>${s.picked.map(id => { const m = findModel(id); return `<span class="chip sm static" data-notr>${esc(m ? m.name : id)}<button type="button" class="x" data-act="model-pick" data-id="${esc(id)}" aria-label="Remove">${ic('x')}</button></span>`; }).join('')}</div>` : ''}`;
   }
+  // Comparing, one question at a time: each model's answer stacked in a card, tap "Pick this" on the
+  // best one, and the next question comes up. After the last, the results: picks and speed per model.
+  const steps = () => `<div class="cmp-steps" role="group" aria-label="Prompts">${COMPARE_PROMPTS.map((p, i) => {
+      const run = lastRun(), done = run && run.picks[i] != null;
+      return `<button type="button" class="cmp-dot${done ? ' done' : ''}" data-act="cmp-step" data-id="${i}" aria-current="${mp().step === i}" aria-label="${esc(p)}">${done ? ic('check') : i + 1}</button>`;
+    }).join('')}<button type="button" class="cmp-dot res" data-act="cmp-step" data-id="${COMPARE_PROMPTS.length}" aria-current="${mp().step === COMPARE_PROMPTS.length}" aria-label="Results"${tally().total ? '' : ' disabled'}>${ic('star')}</button></div>`;
+  const lastRun = () => mp().runs[mp().runs.length - 1] || null;
+  function tally() {
+    const s = mp();
+    let total = 0;
+    const rows = s.picked.map(id => {
+      let wins = 0, ms = 0, n = 0;
+      s.runs.forEach(run => {
+        Object.values(run.picks).forEach(w => { if (w === id) wins++; });
+        Object.values(run.answers).forEach(a => { const r = a[id]; if (r && !r.busy && !r.error) { ms += r.ms; n++; } });
+      });
+      return { id, wins, avg: n ? ms / n : null };
+    }).sort((a, b) => b.wins - a.wins || (a.avg || 1e9) - (b.avg || 1e9));
+    s.runs.forEach(run => { total += Object.keys(run.picks).length; });
+    return { rows, total };
+  }
   function compareBody() {
-    const s = mp(), run = s.runs[s.run] || null, names = s.picked.map(id => findModel(id) || { id, name: id });
-    const cell = (p, id) => {
-      const r = run && run[p] && run[p][id];
-      if (!r) return `<div class="cmp-cell"><span class="meta">—</span></div>`;
-      if (r.busy) return `<div class="cmp-cell"><span class="msg-status"><span class="spin" aria-hidden="true"></span>${esc(r.status || N.L('Thinking'))}</span>${r.text ? `<div class="msg-body" data-notr>${md(r.text)}</div>` : ''}</div>`;
-      return `<div class="cmp-cell">${r.error ? `<span class="msg-err">${esc(r.error)}</span>` : `<div class="msg-body" data-notr>${md(r.text)}</div>`}<span class="cmp-time">${esc(`${(r.ms / 1000).toFixed(1)} s`)}</span></div>`;
+    const s = mp(), run = lastRun(), last = COMPARE_PROMPTS.length;
+    if (s.step >= last) {
+      const t = tally();
+      return `<div class="head">${N.title('Results')}</div>${steps()}
+        <ol class="cmp-results">${t.rows.map((r, i) => { const m = findModel(r.id) || { id: r.id, name: r.id };
+          return `<li class="cmp-res${i === 0 && r.wins ? ' top' : ''}">${mono(m.brand)}<span class="cmp-rtext"><span class="cmp-mname" data-notr>${esc(m.name)}</span>
+            <span class="meta">${esc(`${r.wins} of ${t.total} picks${r.avg != null ? ` · ${(r.avg / 1000).toFixed(1)} s` : ''}`)}</span></span>
+            <button type="button" class="btn-soft sm" data-act="model-use" data-id="${esc(r.id)}">Use for Chat</button></li>`; }).join('')}</ol>`;
+    }
+    const card = id => {
+      const m = findModel(id) || { id, name: id }, r = run.answers[s.step][id] || { busy: true }, chosen = run.picks[s.step] === id;
+      return `<li class="cmp-card${chosen ? ' chosen' : ''}">
+        <div class="cmp-top">${mono(m.brand)}<span class="cmp-mname" data-notr>${esc(m.name)}</span>${!r.busy && !r.error ? `<span class="cmp-time">${esc(`${(r.ms / 1000).toFixed(1)} s`)}</span>` : ''}</div>
+        ${r.busy ? `<span class="msg-status"><span class="spin" aria-hidden="true"></span>${esc(r.status || N.L('Thinking'))}</span>`
+          : r.error ? `<span class="msg-err">${esc(r.error)}</span>` : `<div class="msg-body" data-notr>${md(r.text)}</div>`}
+        <button type="button" class="${chosen ? 'btn-main' : 'btn-soft'} cmp-pick" data-act="cmp-pick" data-id="${esc(id)}"${r.busy || r.error ? ' disabled' : ''}>${chosen ? ic('check') : ''}<span>Pick this</span></button>
+      </li>`;
     };
-    return `<div class="head">${N.title('Compare models')}</div>
-      <div class="cmp-prompts" role="group" aria-label="Prompts">${COMPARE_PROMPTS.map((p, i) => `<label class="cmp-p"><input type="checkbox" data-change="cmp-prompt" value="${i}"${s.prompts.includes(p) ? ' checked' : ''}${s.busy ? ' disabled' : ''}><span>${esc(p)}</span></label>`).join('')}</div>
-      ${s.runs.length ? `<div class="chips cmp-runs">${s.runs.map((x, i) => `<button type="button" class="chip sm" data-act="cmp-run-view" data-id="${i}" aria-pressed="${i === s.run}">Run ${i + 1}</button>`).join('')}</div>` : ''}
-      <div class="cmp-scroll"><div class="cmp-grid" style="--n:${names.length}">
-        <div class="cmp-corner"></div>${names.map(m => `<div class="cmp-model"><span class="cmp-mname" data-notr>${esc(m.name)}</span>${m.brand ? `<span class="meta" data-notr>${esc(m.brand)}</span>` : ''}
-          <button type="button" class="btn-soft sm" data-act="model-use" data-id="${esc(m.id)}"${s.busy ? ' disabled' : ''}>Use for Chat</button></div>`).join('')}
-        ${(run ? Object.keys(run) : s.prompts).map(p => `<div class="cmp-prompt">${esc(p)}</div>${s.picked.map(id => cell(p, id)).join('')}`).join('')}
-      </div></div>`;
+    return `<div class="head">${N.title('Compare models')}</div>${steps()}
+      <p class="cmp-q">${esc(COMPARE_PROMPTS[s.step])}</p>
+      <ol class="cmp-cards">${s.picked.map(card).join('')}</ol>`;
   }
   function modelSheet() {
     const s = mp();
     if (s.phase === 'compare') {
-      const left = RUNS - s.runs.length;
+      if (s.step < COMPARE_PROMPTS.length) return { wide: true, body: compareBody(), main: null, secondary: { label: 'Back', act: 'cmp-back' } };
+      const top = tally().rows[0], m = top && findModel(top.id), left = RUNS - s.runs.length;
       return { wide: true, body: compareBody(),
-        main: s.busy ? { label: 'Running', busy: true, disabled: true }
-          : left > 0 && s.prompts.length ? { label: s.runs.length ? `Run again · ${left} left` : 'Run', act: 'cmp-run' } : { label: 'Run', disabled: true },
-        secondary: s.busy ? null : { label: 'Back', act: 'cmp-back' } };
+        main: m ? { label: `Use ${m.name} for Chat`, act: 'model-use', id: m.id } : null,
+        secondary: left > 0 ? { label: `Run again · ${left} left`, act: 'cmp-run' } : { label: 'Back', act: 'cmp-back' } };
     }
     const n = s.picked.length, one = n === 1 && findModel(s.picked[0]);
     return { wide: true, body: pickBody(),
-      main: !n ? { label: 'Choose a model', disabled: true } : n === 1 ? { label: `Use ${one ? one.name : 'this model'}`, act: 'model-use', id: s.picked[0] } : { label: `Compare ${n} models`, act: 'cmp-open' } };
+      main: !n ? { label: 'Choose a model', disabled: true } : n === 1 ? { label: `Use ${one ? one.name : 'this model'}`, act: 'model-use', id: s.picked[0] } : { label: `Compare ${n} models`, act: 'cmp-run' } };
   }
   const sheetScreen = N.home.sheetScreen;
   N.home.sheetScreen = () => (N.ui.sheet === 'models' ? modelSheet() : sheetScreen());
-  N.changes['cmp-prompt'] = el => {
-    const s = mp(), p = COMPARE_PROMPTS[+el.value];
-    s.prompts = COMPARE_PROMPTS.filter(x => (x === p ? el.checked : s.prompts.includes(x)));
-    N.refreshMain();
-  };
-  // A run: every chosen prompt to every picked model, each on its own, the models side by side.
-  async function compareRun() {
+  // A run: every set question to every picked model at once, each on its own.
+  function compareRun() {
     const s = mp();
-    if (s.busy || s.runs.length >= RUNS || !s.prompts.length) return;
-    s.busy = true;
-    const run = {};
-    s.prompts.forEach(p => { run[p] = {}; s.picked.forEach(id => { run[p][id] = { busy: true }; }); });
-    s.runs.push(run); s.run = s.runs.length - 1;
+    if (s.runs.length >= RUNS || s.picked.length < 2) return;
+    const run = { answers: {}, picks: {} };
+    COMPARE_PROMPTS.forEach((p, i) => { run.answers[i] = {}; s.picked.forEach(id => { run.answers[i][id] = { busy: true }; }); });
+    s.runs.push(run); s.phase = 'compare'; s.step = 0;
+    repaintSheet();
+    let queued = false;
+    const paint = () => {
+      if (queued) return;
+      queued = true;
+      setTimeout(() => { queued = false; if (N.ui.sheet === 'models' && mp().phase === 'compare' && lastRun() === run) repaintSheet(); }, 120);
+    };
+    COMPARE_PROMPTS.forEach((p, i) => s.picked.forEach(async id => {
+      const r = run.answers[i][id], t0 = performance.now(), messages = [{ role: 'user', text: `${context()}\n${N.L(p)}` }];
+      try {
+        r.text = await converse(id, messages, { tool: name => { r.status = N.L(DOING[name] || 'Working'); paint(); } });
+      } catch (err) { r.error = N.L(FAIL[err.message] || FAIL.failed); }
+      r.ms = performance.now() - t0; r.busy = false;
+      paint();
+    }));
+  }
+  // Picking an answer moves on to the next question still without a pick, then to the results.
+  function pick(id) {
+    const s = mp(), run = lastRun();
+    if (!run) return;
+    run.picks[s.step] = id;
+    const next = COMPARE_PROMPTS.findIndex((p, i) => run.picks[i] == null);
+    s.step = next < 0 ? COMPARE_PROMPTS.length : next;
     N.renderSheet();
-    const paint = () => { if (N.ui.sheet === 'models' && mp().phase === 'compare') { const b = document.querySelector('.cmp-scroll'), x = b ? b.scrollLeft : 0; N.renderSheet(); const a = document.querySelector('.cmp-scroll'); if (a) a.scrollLeft = x; } };
-    for (const p of s.prompts) {
-      await Promise.all(s.picked.map(async id => {
-        const r = run[p][id], t0 = performance.now(), messages = [{ role: 'user', text: `${context()}\n${N.L(p)}` }];
-        try {
-          r.text = await converse(id, messages, { text: t => { r.text = t; }, tool: name => { r.status = N.L(DOING[name] || 'Working'); paint(); } });
-        } catch (err) { r.error = N.L(FAIL[err.message] || FAIL.failed); }
-        r.ms = performance.now() - t0; r.busy = false;
-        paint();
-      }));
-    }
-    s.busy = false;
-    N.renderSheet();
+    const sheet = document.querySelector('.sheet');
+    if (sheet) sheet.scrollTop = 0;
   }
   function useModel(id) {
     const m = findModel(id);
@@ -449,8 +461,8 @@
     models().chat = { id: m.id, name: m.name, brand: m.brand };
     if (changed) { chat.view = []; chat.api = []; }
     N.ui.sheet = null; N.ui.mp = null;
-    N.save(); N.render({ keepScroll: true });
-    N.ui.chatOpen = true; paintChat('chat-input');
+    N.S.appOpen = 'chat';
+    N.save(); N.render({ keepScroll: true, refocus: 'chat-input' });
     N.toast(`Chat uses ${m.name}`);
   }
 
@@ -466,16 +478,12 @@
     'app-open': d => {
       N.S.appOpen = N.S.appOpen === d.id ? null : d.id;
       N.save(); N.render({ refocus: 'dock-' + d.id, keepScroll: true });
+      if (N.S.appOpen === 'chat') checkReady();
     },
     'nk-open': d => {
       const o = N.ui.nkOpen || (N.ui.nkOpen = []), i = o.indexOf(d.id);
       if (i >= 0) o.splice(i, 1); else o.push(d.id);
       N.render({ refocus: 'nk-' + d.id, keepScroll: true });
-    },
-    'chat-toggle': () => {
-      N.ui.chatOpen = !N.ui.chatOpen;
-      paintChat(N.ui.chatOpen ? 'chat-input' : 'chat-fab');
-      if (N.ui.chatOpen) checkReady();
     },
     'chat-ask': d => ask(N.L(d.text)),
     'chat-send': () => { const el = document.getElementById('chat-input'); ask(el ? el.value : chat.draft); },
@@ -489,16 +497,16 @@
       repaintSheet();
     },
     'model-use': d => useModel(d.id),
-    'cmp-open': () => { const s = mp(); s.phase = 'compare'; s.runs = []; s.run = 0; N.renderSheet(); },
-    'cmp-back': () => { mp().phase = 'pick'; N.renderSheet(); },
     'cmp-run': () => compareRun(),
-    'cmp-run-view': d => { mp().run = +d.id; repaintSheet(); }
+    'cmp-back': () => { const s = mp(); s.phase = 'pick'; s.runs = []; N.renderSheet(); },
+    'cmp-step': d => { const s = mp(); s.step = +d.id; N.renderSheet(); const sh = document.querySelector('.sheet'); if (sh) sh.scrollTop = 0; },
+    'cmp-pick': d => pick(d.id)
   });
 
   // An open app keeps itself current; the rest of the page is left alone.
   setInterval(() => {
     const el = document.getElementById('app-view');
-    if (!el || !ready() || document.querySelector('.sheet')) return;
+    if (!el || !ready() || document.querySelector('.sheet') || el.dataset.app === 'chat') return;
     el.innerHTML = el.dataset.app === 'insights' ? insightsView(N.viewStore()) : dashView(N.viewStore());
     N.paint();
   }, 30000);

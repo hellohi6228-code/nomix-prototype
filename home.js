@@ -7,25 +7,29 @@
   const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
   /* ---------- Header and store switcher ---------- */
-  // All stores, one brand, or one store: brands first, then the chosen brand's stores.
+  // Any mix of brands and stores: brand chips add or remove a whole brand, store chips one store.
+  // The stores fold into one chip that names the choice; tap it to see them again.
   function storeBar(view) {
     const stores = N.allStores();
     if (stores.length < 2) return '';
-    const chip = (id, label, key, on, cls) => `<button type="button" class="chip${cls ? ' ' + cls : ''}" id="st-${esc(key)}" data-act="store" data-id="${esc(id)}" aria-pressed="${on}">${esc(label)}</button>`;
-    const open = view === 'all' ? null : view.startsWith('brand:') ? view.slice(6) : N.brandOf(view);
-    const brands = N.brands().filter(b => stores.some(s => N.brandOf(s) === b.id)).map(b => {
-      const n = stores.filter(s => N.brandOf(s) === b.id).length;
-      return chip('brand:' + b.id, `${b.name} · ${n}`, 'b-' + b.id, open === b.id, 'brand');
+    const picked = view === 'all' ? [] : stores.filter(s => N.inView(s, view));
+    const brandsHere = N.brands().filter(b => stores.some(s => N.brandOf(s) === b.id));
+    const brands = brandsHere.map(b => {
+      const mine = stores.filter(s => N.brandOf(s) === b.id), n = mine.filter(s => picked.includes(s)).length;
+      const state = !n ? 'false' : n === mine.length ? 'true' : 'mixed';
+      return `<button type="button" class="chip brand" id="st-b-${esc(b.id)}" data-act="store-brand" data-id="${esc(b.id)}" aria-pressed="${state}">${esc(b.name)} · ${mine.length}</button>`;
     }).join('');
-    const mine = open ? stores.filter(s => N.brandOf(s) === open) : [];
-    // A brand's stores fold into one chip once a choice is made; tap it to see them again.
-    const one = mine.includes(view);
-    const storesRow = mine.length < 2 ? ''
-      : N.ui.storesOpen ? `<div class="sb-row sb-stores">${mine.map(s => chip(s, N.storeLoc(s), s, view === s)).join('')}
-          <button type="button" class="chip sb-fold" id="st-fold" data-act="stores-fold" aria-expanded="true" aria-label="Hide stores">${N.icon('chev', 'up')}</button></div>`
-      : `<div class="sb-row"><button type="button" class="chip sb-pick" id="st-fold" data-act="stores-fold" aria-expanded="false"${one ? ' aria-pressed="true"' : ''}>${esc(one ? N.storeLoc(view) : 'Choose a store')}${N.icon('chev', 'chev')}</button></div>`;
-    return `<div class="storebar" role="group" aria-label="Choose a brand or store">
-      <div class="sb-row">${chip('all', `All ${stores.length} stores`, 'all', view === 'all')}${brands}</div>
+    const label = !picked.length ? 'Choose stores' : picked.length <= 2 ? picked.map(N.storeLoc).join(', ') : `${picked.length} stores`;
+    const storesRow = N.ui.storesOpen
+      ? `<div class="sb-stores">${brandsHere.map(b => {
+          const mine = stores.filter(s => N.brandOf(s) === b.id);
+          return `<div class="sb-group" role="group" aria-label="${esc(b.name)}"><span class="lbl">${esc(b.name)}</span><div class="sb-row">${mine.map(s =>
+            `<button type="button" class="chip" id="st-${esc(s)}" data-act="store-one" data-id="${esc(s)}" aria-pressed="${picked.includes(s)}">${esc(N.storeLoc(s))}</button>`).join('')}</div></div>`;
+        }).join('')}
+        <button type="button" class="chip sb-fold" id="st-fold" data-act="stores-fold" aria-expanded="true">Done${N.icon('chev', 'up')}</button></div>`
+      : `<div class="sb-row"><button type="button" class="chip sb-pick" id="st-fold" data-act="stores-fold" aria-expanded="false"${picked.length ? ' aria-pressed="true"' : ''}>${esc(label)}${N.icon('chev', 'chev')}</button></div>`;
+    return `<div class="storebar" role="group" aria-label="Choose brands or stores">
+      <div class="sb-row"><button type="button" class="chip" id="st-all" data-act="store" data-id="all" aria-pressed="${view === 'all'}">All ${stores.length} stores</button>${brands}</div>
       ${storesRow}
     </div>`;
   }
@@ -60,7 +64,7 @@
     </div>`;
   }
 
-  /* ---------- Overview ---------- */
+  /* ---------- Data map ---------- */
   function ownBlock() {
     const o = N.S.own, u = N.ui;
     if (o) {
@@ -91,7 +95,7 @@
   }
   function overviewSection(store) {
     const vs = (N.real || N.S).versions.length;
-    return `<section class="sec" aria-labelledby="sec-ov"><h2 class="sec-h" id="sec-ov">Overview</h2>
+    return `<section class="sec" aria-labelledby="sec-ov"><h2 class="sec-h" id="sec-ov">Data map</h2>
       <div class="glass keepcard">
         ${N.connected().length ? N.storeFlow(store, true) : '<p class="meta">No stores yet</p>'}
         <div class="ov-foot">
@@ -315,6 +319,20 @@
       if (!document.getElementById(el.id)) { const f = document.getElementById('st-fold'); if (f) f.focus({ preventScroll: true }); }
     },
     'stores-fold': () => { N.ui.storesOpen = !N.ui.storesOpen; N.render({ refocus: 'st-fold', keepScroll: true }); },
+    // Add or take away a whole brand, or one store, from what's being looked at.
+    'store-brand': (d, el) => {
+      const view = N.viewStore(), all = N.allStores(), mine = all.filter(s => N.brandOf(s) === d.id);
+      const now = view === 'all' ? [] : all.filter(s => N.inView(s, view)), has = mine.every(s => now.includes(s));
+      N.S.store = N.viewOf(has ? now.filter(s => !mine.includes(s)) : now.concat(mine));
+      if (!N.viewing) N.save();
+      N.render({ refocus: el.id, keepScroll: true });
+    },
+    'store-one': (d, el) => {
+      const view = N.viewStore(), all = N.allStores(), now = view === 'all' ? [] : all.filter(s => N.inView(s, view));
+      N.S.store = N.viewOf(now.includes(d.id) ? now.filter(s => s !== d.id) : now.concat(d.id));
+      if (!N.viewing) N.save();
+      N.render({ refocus: el.id, keepScroll: true });
+    },
     // Tap a tool or tag in the diagram to see what it touches; tap it again (or the chip) to show everything.
     focus: (d, el) => { N.ui.focus = N.ui.focus === d.id ? null : d.id; N.render({ refocus: el.id === 'focus-clear' ? null : el.id, keepScroll: true }); },
     'toggle-open': d => {

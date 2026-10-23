@@ -101,9 +101,30 @@
       : mine.length > 3 ? `${mine.length} stores` : N.list(mine.map(N.storeLoc));
     return `${b.name}: ${what}`;
   }).filter(Boolean).join(' · ');
-  // What home is showing: 'all', a whole brand ('brand:gl') or one store.
-  N.inView = (storeId, view) => !view || view === 'all' || view === storeId || view === 'brand:' + N.brandOf(storeId);
-  N.viewName = view => (view.startsWith('brand:') ? N.brand(view.slice(6)).name : N.storeName(view));
+  // What home is showing: 'all', a whole brand ('brand:gl'), one store, or any mix ('set:id,id,…').
+  N.inView = (storeId, view) => !view || view === 'all' || view === storeId || view === 'brand:' + N.brandOf(storeId)
+    || (view.startsWith('set:') && view.slice(4).split(',').includes(storeId));
+  N.viewName = view => {
+    if (view.startsWith('brand:')) return N.brand(view.slice(6)).name;
+    if (!view.startsWith('set:')) return N.storeName(view);
+    // Whole brands by name, then the odd stores: "Umiya + Laredo", or a count when there are many.
+    const ids = view.slice(4).split(','), parts = [];
+    let rest = ids.slice();
+    N.brands().forEach(b => {
+      const mine = b.stores.map(s => s[0]);
+      if (mine.length > 1 && mine.every(s => ids.includes(s))) { parts.push(b.name); rest = rest.filter(s => !mine.includes(s)); }
+    });
+    if (rest.length) parts.push(rest.length <= 2 ? rest.map(N.storeLoc).join(' + ') : `${rest.length} stores`);
+    return parts.join(' + ');
+  };
+  // The simplest name for a set of stores: all of them, one brand, one store, or the set.
+  N.viewOf = ids => {
+    const all = N.allStores(), set = all.filter(s => ids.includes(s));
+    if (!set.length || set.length === all.length) return 'all';
+    if (set.length === 1) return set[0];
+    const b = N.brands().find(x => { const mine = all.filter(s => N.brandOf(s) === x.id); return mine.length === set.length && mine.every(s => set.includes(s)); });
+    return b ? 'brand:' + b.id : 'set:' + set.join(',');
+  };
   N.storesOf = id => (N.S.tools[id] && N.S.tools[id].stores) || [];
   N.allStores = () => STORES.map(s => s.id).filter(s => N.connected().some(id => N.storesOf(id).includes(s)));
   N.viewStore = () => {
