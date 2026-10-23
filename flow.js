@@ -3,7 +3,7 @@
   'use strict';
   const N = window.Nomix, esc = N.esc;
   const still = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const toolState = id => { const s = N.status(id); return s === 'connected' ? 'live' : s === 'help' ? 'help' : 'later'; };
+  const toolState = id => { const s = N.status(id); return s === 'connected' ? 'live' : ['help', 'waiting', 'bridge', 'requested', 'invited'].includes(s) ? 'help' : 'later'; };
 
   // One diagram for the end of setup and for Overview: brands (or one brand's stores) → tools → Nomix → tags.
   // view = 'all', 'brand:<id>' or one store. pick = Overview: every bubble but Nomix can be tapped —

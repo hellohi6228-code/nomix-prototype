@@ -53,7 +53,7 @@
     const st = N.status(t.id), inSel = N.S.selected.includes(t.id);
     const locked = ctx === 'home' && inSel && st !== 'later';
     const on = ctx === 'setup' ? inSel : N.S.pick.includes(t.id);
-    const what = inSel && st === 'connected' ? 'Connected' : inSel && st === 'help' ? 'Being set up with you' : N.toolWhat(t);
+    const what = inSel && st !== 'later' ? N.statusText(st) : N.toolWhat(t);
     return `<button type="button" class="tool" id="tool-${esc(t.id)}" data-act="toggle-tool" data-id="${esc(t.id)}" aria-pressed="${on || locked}"${locked ? ' disabled' : ''}>
       ${N.mono(t)}<span class="tool-text"><span class="name">${N.toolNameHtml(t)}</span><span class="what">${esc(what)}</span></span>
       <span class="tick" aria-hidden="true">${N.icon('check')}</span></button>`;
@@ -186,6 +186,8 @@
   });
 
   /* ---------- 3. Connect one tool at a time (setup and home share this) ---------- */
+  N.statusText = st => ({ connected: 'Connected', help: 'Being set up with you', waiting: 'Waiting for the first report', bridge: 'Store Bridge on the way',
+    requested: 'Access requested', invited: 'Waiting for store managers', error: 'Needs a new sign-in' })[st] || '';
   N.startFlow = (ids, ctx) => {
     const queue = ids.filter(id => N.status(id) === 'later');
     if (!queue.length) {
@@ -193,7 +195,7 @@
       if (ctx === 'setup') return N.go('track');
       N.save(); return N.render();
     }
-    N.S.flow = { queue, i: 0, phase: 'intro', ctx, note: '', stores: null, found: null };
+    N.S.flow = { queue, i: 0, phase: N.firstPhase(queue[0]), ctx, note: '', stores: null, found: null };
     if (ctx === 'setup') N.go('connect'); else { N.save(); N.render({ focus: true }); }
   };
 
@@ -203,7 +205,7 @@
     if (f.queue.length < 2) return '';
     return `<ol class="queue" aria-label="Tool ${f.i + 1} of ${f.queue.length}">${f.queue.map((id, k) => {
       const t = N.tool(id), s = N.status(id);
-      const cls = k === f.i ? 'q-now' : s === 'connected' ? 'q-ok' : s === 'help' ? 'q-help' : k < f.i ? 'q-later' : '';
+      const cls = k === f.i ? 'q-now' : s === 'connected' ? 'q-ok' : ['help', 'waiting', 'bridge', 'requested', 'invited'].includes(s) ? 'q-help' : k < f.i ? 'q-later' : '';
       return `<li class="${cls}">${N.mono(t)}<span>${esc(t.name)}</span>${s === 'connected' ? N.icon('check') : ''}</li>`;
     }).join('')}</ol>`;
   }
@@ -263,7 +265,7 @@
     const f = N.S.flow;
     if (!f) return;
     if (f.i < f.queue.length - 1) {
-      f.i++; f.phase = 'intro'; f.note = ''; f.stores = null; f.found = null;
+      f.i++; f.phase = N.firstPhase(f.queue[f.i]); f.note = ''; f.stores = null; f.found = null; f.way = null; N.ui.ff = {};
       N.save(); return N.render({ focus: true });
     }
     const last = f.queue[f.i];
@@ -340,6 +342,287 @@
     },
     'flow-next': () => advance()
   });
+
+  /* ---------- Tools with several ways in (MenuSifu first) ---------- */
+  // The owner picks which stores run the tool, then one way to connect them; more ways can be added
+  // later from the tool's card. In live mode the service decides what each tool offers.
+  N.waysFor = id => (!N.LIVE && D.WAYS && D.WAYS[id]) || null;
+  const firstPhase = id => (N.waysFor(id) ? 'stores' : 'intro');
+  N.firstPhase = firstPhase;
+  const WAY_PHASES = ['stores', 'way', 'portal', 'checking', 'send', 'bridge', 'request', 'invite', 'sent'];
+  const wayText = (key, id) => {
+    const w = D.WAY_INFO[key], n = N.tool(id).name, fill = s => s.replace(/\{tool\}/g, n);
+    return { label: fill(w.label), about: fill(w.about), fresh: w.fresh, go: fill(w.go) };
+  };
+  // This tool's form, kept on screen only and never saved (it can hold a password).
+  const ff = () => N.ui.ff || (N.ui.ff = {});
+  const count = n => (n === 1 ? '1 store' : `${n} stores`);
+  const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  N.inboxFor = (id, store) => {
+    if (!N.S.inbox) N.S.inbox = Math.random().toString(36).slice(2, 8);
+    return `${store ? store + '.' : ''}${id}-${N.S.inbox}@in.nomix.app`;
+  };
+
+  function storePicker(picked) {
+    return N.brands().map(b => {
+      const ids = b.stores.map(s => s[0]), all = ids.every(s => picked.includes(s));
+      return `<div class="locs" role="group" aria-label="${esc(b.name)}">
+        <span class="lbl locs-h">${esc(b.name)}<button type="button" class="chip sm" data-act="flow-brand" data-id="${esc(b.id)}" aria-pressed="${all}">${all ? 'All chosen' : 'Choose all'}</button></span>
+        ${b.stores.map(([sid, loc]) => `<label class="loc"><input type="checkbox" data-change="flowstore" value="${esc(sid)}"${picked.includes(sid) ? ' checked' : ''}><span class="name">${esc(loc)}</span></label>`).join('')}</div>`;
+    }).join('');
+  }
+  const copyRow = text => `<div class="addr"><code data-notr>${esc(text)}</code><button type="button" class="btn-soft" data-act="copy-text" data-text="${esc(text)}">Copy</button></div>`;
+  const field = (k, label, opts = {}) => `<label class="kf"><span class="lbl">${esc(label)}${opts.optional ? '<span class="opt">Optional</span>' : ''}</span>
+    <input class="text-input" type="${opts.type || 'text'}" autocomplete="${opts.type === 'password' ? 'new-password' : 'off'}" spellcheck="false"${opts.notr ? ' data-notr' : ''} data-input="ff" data-k="${k}" value="${esc(ff()[k] || '')}"${opts.placeholder ? ` placeholder="${esc(opts.placeholder)}"` : ''}></label>`;
+
+  function letter(id, stores) {
+    const t = N.tool(id), f = ff(), today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    return `Subject: Read-only access to our ${t.name} data for Nomix
+
+Hi${f.amName ? ` ${f.amName}` : ''},
+
+${D.COMPANY.name} uses ${t.name} at ${stores.length === 1 ? 'one of our stores' : `${stores.length} of our stores`} (${N.storeList(stores)}). We have chosen Nomix as our data platform and would like ${t.name} to give Nomix read-only access to our own data for these stores: orders and order items, payments (no card numbers), discounts, voids and refunds, menu, staff time records and end-of-day reports.
+
+Please share it the way you already share data with partners, and tell us whether Nomix should join a partner program. We can revoke this access at any time.
+
+Signed for ${D.COMPANY.name}:
+${f.signer || '[your name]'}, ${f.title || '[your title]'}
+${today}`;
+  }
+
+  // Record one way of connecting a tool, and work out the tool's overall status from all its ways.
+  const WAY_ORDER = ['waiting', 'bridge', 'invited', 'requested'];
+  function setWay(id, way, data) {
+    const r = N.S.tools[id] || (N.S.tools[id] = { at: Date.now(), stores: [] });
+    r.ways = r.ways || {};
+    r.ways[way] = Object.assign({ at: Date.now() }, data);
+    r.stores = [...new Set([...(r.stores || []), ...(data.stores || [])])];
+    const states = Object.values(r.ways).map(w => w.status);
+    r.status = states.includes('connected') ? 'connected' : WAY_ORDER.find(s => states.includes(s)) || 'help';
+    if (!N.S.selected.includes(id)) N.S.selected.push(id);
+    return r;
+  }
+  function finish(title, lead) {
+    const f = N.S.flow;
+    Object.assign(f, { phase: 'sent', sentTitle: title, sentLead: lead });
+    N.ui.ff = {};
+    N.save(); N.render({ focus: true });
+  }
+
+  const baseView = N.flowView;
+  N.flowView = () => {
+    const f = N.S.flow, id = f.queue[f.i], t = N.tool(id), name = t.name;
+    if (!WAY_PHASES.includes(f.phase)) return baseView();
+    const picked = f.stores || [], fv = ff();
+    let state = 'idle', h = '', lead = '', extra = '', main = null, sec = { label: 'Do this later', act: 'flow-later' };
+    const back = { label: 'Back', act: 'way-back' };
+    if (f.phase === 'stores') {
+      h = `Which stores run ${name}?`;
+      lead = 'Stores on other systems connect those separately.';
+      extra = storePicker(picked);
+      main = picked.length ? { label: `Continue with ${count(picked.length)}`, act: 'flow-stores-next' } : { label: 'Choose a store', disabled: true };
+      if (f.ctx === 'home' && f.mode === 'add') sec = { label: 'Cancel', act: 'sheet-close' };
+    } else if (f.phase === 'way') {
+      h = `How should Nomix get ${name} data?`;
+      lead = N.storeList(picked);
+      extra = `<button type="button" class="link-quiet" data-act="way-stores">Change stores</button><div class="ways">${N.waysFor(id).map((k, i) => {
+        const w = wayText(k, id);
+        return `<button type="button" class="way" data-act="way-pick" data-id="${k}" aria-pressed="${f.way === k}">
+          <span class="way-top"><span class="name">${esc(w.label)}</span>${i === 0 ? '<span class="badge">Recommended</span>' : ''}</span>
+          <span class="what">${esc(w.about)}</span><span class="fresh">${esc(w.fresh)}</span>
+          <span class="tick" aria-hidden="true">${N.icon('check')}</span></button>`;
+      }).join('')}</div>
+        <button type="button" class="link-quiet" data-act="way-invite">Each store’s manager handles ${esc(name)}? Send it to them instead</button>`;
+      main = f.way ? { label: wayText(f.way, id).go, act: 'way-go' } : { label: 'Choose a way', disabled: true };
+      if (f.ctx === 'home' && f.mode === 'add') sec = { label: 'Cancel', act: 'sheet-close' };
+    } else if (f.phase === 'portal') {
+      h = `Give Nomix its own ${name} login`;
+      extra = `<ol class="steps">${((D.WAY_STEPS[id] || {}).portal || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+        <div class="keyform">${field('user', 'Username or email', { notr: true })}${field('pass', 'Password', { type: 'password', notr: true })}</div>
+        <p class="hint">Nomix keeps this login locked away and only reads reports with it. If ${esc(name)} asks for a code or a check, Nomix stops and tells you.</p>`;
+      main = { label: `Connect ${name}`, act: 'portal-go', disabled: !((fv.user || '').trim() && fv.pass) };
+      sec = back;
+    } else if (f.phase === 'checking') {
+      state = 'waiting'; h = `Signing in to ${name}`; lead = 'Checking the login and finding your stores.';
+      main = { label: `Waiting for ${name}`, busy: true, disabled: true }; sec = null;
+    } else if (f.phase === 'send') {
+      h = `Have ${name} email its reports here`;
+      extra = `<ol class="steps">${((D.WAY_STEPS[id] || {}).reports || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+        ${copyRow(N.inboxFor(id))}
+        <details class="addr-more"><summary>An address for each store</summary><ul class="addr-list">${picked.map(s =>
+          `<li><span>${esc(N.storeName(s))}</span><code data-notr>${esc(N.inboxFor(id, s))}</code></li>`).join('')}</ul></details>`;
+      main = { label: 'Done', act: 'send-done' }; sec = back;
+    } else if (f.phase === 'bridge') {
+      h = `Store Bridge for ${count(picked.length)}`;
+      lead = `We ship one small box to each store. It plugs into the store’s network and is added in ${name} as an extra printer.`;
+      extra = `<div class="twocol"><div><span class="lbl">It sees</span><ul class="plain"><li>Every kitchen ticket: items, options, order number, time</li><li>Delivery orders that print in the kitchen</li><li>Receipts when they print: totals, tax, tip, how it was paid</li></ul></div>
+        <div><span class="lbl">It misses</span><ul class="plain"><li>Anything that never prints</li><li>Receipts a guest declines (end-of-day reports fill these in)</li></ul></div></div>
+        <div class="keyform">${field('contact', 'Who should we call to schedule the installs?')}${field('phone', 'Their phone', { type: 'tel' })}</div>`;
+      main = { label: `Request ${picked.length === 1 ? '1 Store Bridge' : picked.length + ' Store Bridges'}`, act: 'bridge-go', disabled: !((fv.contact || '').trim() && (fv.phone || '').replace(/\D/g, '').length >= 7) };
+      sec = back;
+    } else if (f.phase === 'request') {
+      h = `Ask ${name} to connect directly`;
+      lead = `${name} answers its own customers. Nomix sends this for you, copies you, and follows up.`;
+      const ok = EMAIL.test(fv.amEmail || '') && (fv.signer || '').trim() && (fv.title || '').trim() && fv.agree;
+      extra = `<div class="keyform">${field('amEmail', `Your ${name} account manager’s email`, { type: 'email', notr: true })}${field('amName', 'Their first name', { optional: true, notr: true })}
+          ${field('signer', 'Your name', { notr: true })}${field('title', 'Your title')}</div>
+        <pre class="letter" data-notr>${esc(letter(id, picked))}</pre>
+        <label class="agree"><input type="checkbox" data-change="ffcheck" data-k="agree"${fv.agree ? ' checked' : ''}><span>I can sign for ${esc(D.COMPANY.name)}, and I authorize Nomix to send this and follow up.</span></label>
+        <button type="button" class="link-quiet" data-act="way-back">Choose a different way</button>`;
+      main = { label: 'Sign and send', act: 'request-go', disabled: !ok };
+      sec = { label: 'Send it from my own email instead', act: 'request-self' };
+    } else if (f.phase === 'invite') {
+      h = `Send ${name} to each store’s manager`;
+      lead = 'Each manager gets a link that connects only their store. You’ll see who has finished.';
+      extra = `<div class="match">${picked.map(s => `<div class="mrow"><span class="m-text"><span class="name">${esc(N.storeName(s))}</span></span>
+          <input class="text-input m-pick" type="email" autocomplete="off" data-notr data-input="ff" data-k="mgr:${esc(s)}" placeholder="Manager’s email" value="${esc(fv['mgr:' + s] || '')}" aria-label="Manager’s email for ${esc(N.storeName(s))}"></div>`).join('')}</div>`;
+      const n = picked.filter(s => EMAIL.test(fv['mgr:' + s] || '')).length;
+      main = n ? { label: `Send ${n === 1 ? '1 invite' : n + ' invites'}`, act: 'invite-go' } : { label: 'Add a manager’s email', disabled: true };
+      sec = back;
+    } else if (f.phase === 'sent') {
+      state = 'help'; h = f.sentTitle; lead = f.sentLead;
+      main = { label: nextStep(f), act: 'flow-next' };
+      sec = f.ctx === 'home' ? null : { label: `Connect ${name} another way too`, act: 'way-back' };
+    }
+    const body = `${queueStrip(f)}<div class="connect" aria-live="polite">${linkViz(t, state)}
+      <div class="head">${N.title(h)}${lead ? `<p class="lead">${esc(lead)}</p>` : ''}</div>${extra}</div>`;
+    return { body, main, secondary: sec };
+  };
+
+  N.inputs.ff = (v, el) => {
+    ff()[el.dataset.k] = v;
+    // The request letter shows the name and title as they're typed.
+    const pre = document.querySelector('.letter'), f = N.S.flow;
+    if (pre && f && f.phase === 'request') pre.textContent = letter(cur(), f.stores || []);
+    N.refreshMain();
+  };
+  N.changes.ffcheck = el => { ff()[el.dataset.k] = el.checked; N.refreshMain(); };
+  N.changes.flowstore = el => {
+    const f = N.S.flow;
+    if (!f) return;
+    const set = new Set(f.stores || []);
+    if (el.checked) set.add(el.value); else set.delete(el.value);
+    f.stores = N.brands().flatMap(b => b.stores.map(s => s[0])).filter(s => set.has(s));
+    N.save(); N.refreshMain();
+    redrawBrandChips();
+  };
+  function redrawBrandChips() {
+    const f = N.S.flow;
+    document.querySelectorAll('[data-act="flow-brand"]').forEach(b => {
+      const all = N.brand(b.dataset.id).stores.every(s => (f.stores || []).includes(s[0]));
+      b.setAttribute('aria-pressed', String(all));
+      b.textContent = N.L(all ? 'All chosen' : 'Choose all');
+    });
+  }
+
+  Object.assign(N.acts, {
+    'flow-brand': d => {
+      const f = N.S.flow, ids = N.brand(d.id).stores.map(s => s[0]);
+      const all = ids.every(s => (f.stores || []).includes(s));
+      const set = new Set(f.stores || []);
+      ids.forEach(s => (all ? set.delete(s) : set.add(s)));
+      f.stores = N.brands().flatMap(b => b.stores.map(s => s[0])).filter(s => set.has(s));
+      document.querySelectorAll('[data-change="flowstore"]').forEach(el => { el.checked = set.has(el.value); });
+      N.save(); N.refreshMain(); redrawBrandChips();
+    },
+    'flow-stores-next': () => {
+      const f = N.S.flow;
+      if (!(f.stores || []).length) return;
+      const ways = N.waysFor(cur());
+      Object.assign(f, { phase: 'way', way: ways.length === 1 ? ways[0] : f.way || null });
+      N.save(); N.render({ focus: true });
+    },
+    'way-pick': (d, el) => {
+      N.S.flow.way = d.id;
+      el.parentNode.querySelectorAll('.way').forEach(b => b.setAttribute('aria-pressed', String(b === el)));
+      N.save(); N.refreshMain();
+    },
+    'way-go': () => {
+      const f = N.S.flow, phase = { portal: 'portal', reports: 'send', bridge: 'bridge', request: 'request' }[f.way];
+      if (!phase) return;
+      N.ui.ff = {};
+      f.phase = phase; N.save(); N.render({ focus: true });
+    },
+    'way-invite': () => { N.ui.ff = {}; N.S.flow.phase = 'invite'; N.save(); N.render({ focus: true }); },
+    'way-back': () => { const f = N.S.flow; f.phase = 'way'; N.save(); N.render({ focus: true }); },
+    'way-stores': () => { N.S.flow.phase = 'stores'; N.save(); N.render({ focus: true }); },
+    // From a tool's card: connect more stores or another way.
+    'way-again': d => {
+      const r = N.S.tools[d.id] || {};
+      N.ui.ff = {};
+      N.S.flow = { queue: [d.id], i: 0, phase: 'way', ctx: 'home', mode: 'add', stores: (r.stores || []).slice(), way: null };
+      N.save(); N.render({ focus: true });
+    },
+    'portal-go': () => {
+      const f = N.S.flow, id = cur(), fv = ff();
+      if (!(fv.user || '').trim() || !fv.pass) return;
+      f.phase = 'checking'; N.save(); N.render({ focus: true });
+      N.clearWait();
+      waitTimer = setTimeout(() => {
+        const g = N.S.flow;
+        if (!g || g.phase !== 'checking' || g.queue[g.i] !== id) return;
+        const stores = (g.stores || []).slice();
+        const r = setWay(id, 'portal', { status: 'connected', stores, account: (fv.user || '').trim() });
+        r.at = r.at || Date.now();
+        N.ui.ff = {};
+        if (!r.feed) N.seedFeed(id);
+        N.commit(`Connected ${N.tool(id).name} with its own login · ${N.storeList(stores)}`);
+        settle('done');
+      }, 2200);
+    },
+    'send-done': () => {
+      const f = N.S.flow, id = cur(), name = N.tool(id).name;
+      const r = setWay(id, 'reports', { status: 'waiting', stores: f.stores.slice() });
+      N.commit(`Gave ${name} its Nomix address · ${N.storeList(f.stores)}`);
+      finish('Waiting for the first report', r.status === 'connected' ? 'Reports show up here once the first one arrives.' : `${name} shows as working once its first report arrives.`);
+    },
+    'bridge-go': () => {
+      const f = N.S.flow, id = cur(), fv = ff();
+      setWay(id, 'bridge', { status: 'bridge', stores: f.stores.slice(), contact: fv.contact.trim(), phone: fv.phone.trim() });
+      N.commit(`Requested Store Bridge for ${N.storeList(f.stores)}`);
+      finish(`Store Bridge requested for ${count(f.stores.length)}`, `We’ll call ${fv.contact.trim()} to schedule the installs.`);
+    },
+    'request-go': () => {
+      const f = N.S.flow, id = cur(), fv = ff(), name = N.tool(id).name;
+      setWay(id, 'request', { status: 'requested', stores: f.stores.slice(), to: fv.amEmail.trim(), signer: fv.signer.trim(), title: fv.title.trim(), sent: 'nomix' });
+      N.commit(`Asked ${name} to connect directly · ${N.storeList(f.stores)}`);
+      finish(`Request sent to ${name}`, `Sent to ${fv.amEmail.trim()} with you copied. We’ll follow up and tell you when ${name} replies.`);
+    },
+    'request-self': () => {
+      const f = N.S.flow, id = cur(), fv = ff(), name = N.tool(id).name;
+      const text = letter(id, f.stores || []), [subject, ...rest] = text.split('\n');
+      window.location.href = `mailto:${encodeURIComponent(fv.amEmail || '')}?subject=${encodeURIComponent(subject.replace(/^Subject: /, ''))}&body=${encodeURIComponent(rest.join('\n').trim())}`;
+      setWay(id, 'request', { status: 'requested', stores: (f.stores || []).slice(), to: fv.amEmail || '', sent: 'self' });
+      N.commit(`Asked ${name} to connect directly · ${N.storeList(f.stores || [])}`);
+      finish(`Your email to ${name} is ready`, `Send it from your email app. Nomix will follow up once ${name} replies.`);
+    },
+    'invite-go': () => {
+      const f = N.S.flow, id = cur(), fv = ff(), name = N.tool(id).name;
+      const invites = (f.stores || []).filter(s => EMAIL.test(fv['mgr:' + s] || '')).map(s => ({ store: s, email: fv['mgr:' + s].trim(), done: false }));
+      setWay(id, 'invite', { status: 'invited', stores: invites.map(x => x.store), invites });
+      N.commit(`Sent ${name} to ${invites.length === 1 ? '1 store manager' : invites.length + ' store managers'}`);
+      finish(`Invites sent to ${invites.length === 1 ? '1 manager' : invites.length + ' managers'}`, `Each manager connects ${name} for their own store. You’ll see each one here as they finish.`);
+    },
+    'copy-text': d => {
+      const done = () => N.toast('Copied');
+      if (navigator.clipboard) navigator.clipboard.writeText(d.text).then(done, () => N.toast('Select it and copy'));
+      else N.toast('Select it and copy');
+    }
+  });
+
+  // One line per way a tool is connected, for its card on the home screen.
+  N.wayLines = id => {
+    const r = N.S.tools[id] || {}, name = N.tool(id).name;
+    return Object.entries(r.ways || {}).map(([k, w]) => {
+      const where = N.storeList(w.stores || []);
+      if (k === 'portal') return { way: `${name} login`, state: 'Connected', detail: `${w.account} · ${where}`, ok: true };
+      if (k === 'reports') return { way: 'Email reports', state: 'Waiting for the first report', detail: where };
+      if (k === 'bridge') return { way: 'Store Bridge', state: 'Requested', detail: `We’ll call ${w.contact} · ${where}` };
+      if (k === 'request') return { way: 'Direct access', state: `Requested ${N.when(w.at)}`, detail: w.to ? `Sent to ${w.to}` : where };
+      if (k === 'invite') return { way: 'Store managers', state: `${w.invites.filter(x => x.done).length} of ${w.invites.length} finished`, detail: w.invites.map(x => N.storeLoc(x.store)).join(', ') };
+      return { way: k, state: w.status, detail: where };
+    });
+  };
 
   /* ---------- 4. What would you like to keep track of? ---------- */
   // Every tag, grouped, for owners who would rather pick than ask.

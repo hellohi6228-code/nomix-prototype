@@ -290,6 +290,33 @@ window.NOMIX_DATA = (function () {
   // Each vendor's own icon, from its app store listing or website (in logos/).
   const LOGOS = { "2dfire": '2dfire.jpg', "7shifts": '7shifts.jpg', acewill: 'acewill.jpg', aloha: 'aloha.png', brink: 'brink.png', chowbus: 'chowbus.png', chownow: 'chownow.png', clover: 'clover.png', deliverect: 'deliverect.png', doordash: 'doordash.jpg', douyin: 'douyin.jpg', eleme: 'eleme.png', fantuan: 'fantuan.png', grubhub: 'grubhub.png', hungrypanda: 'hungrypanda.png', keruyun: 'keruyun.png', lightspeed: 'lightspeed.png', "meituan-pos": 'meituan-pos.jpg', "meituan-waimai": 'meituan-waimai.jpg', menusifu: 'menusifu.png', olo: 'olo.png', r365: 'r365.png', revel: 'revel.png', simphony: 'simphony.svg', spoton: 'spoton.jpg', square: 'square.jpg', tcsl: 'tcsl.png', toast: 'toast.jpg', touchbistro: 'touchbistro.png', ubereats: 'ubereats.png', wechat: 'wechat.jpg', yinbao: 'yinbao.jpg' };
 
+  // Tools with no open door get several ways in; the owner picks one per set of stores and can add
+  // another later. Order = recommended first. (MenuSifu first; more tools join as each is built.)
+  const WAYS = { menusifu: ['portal', 'bridge', 'reports', 'request'] };
+  const WAY_INFO = {
+    portal: { label: 'Use a {tool} login', about: 'Nomix gets its own login to your {tool} back office, with access to reports only, and reads them throughout the day.', fresh: 'Every 15 minutes', go: 'Add the {tool} login' },
+    bridge: { label: 'Store Bridge', about: 'A small box in each store gets a copy of every kitchen ticket and receipt as it prints. Your printers keep working as they do now.', fresh: 'Live', go: 'Set up Store Bridge' },
+    reports: { label: 'Email reports', about: '{tool} emails its reports to Nomix. Nothing to install.', fresh: 'Once a day', go: 'Get the addresses' },
+    request: { label: 'Ask {tool} to connect directly', about: 'Nomix writes the request, you sign it, and we follow up with {tool} until it’s approved.', fresh: 'Live, once approved', go: 'Write the request' }
+  };
+  // What to do in each tool, in the owner's words. Kept to what the tool really offers.
+  const WAY_STEPS = {
+    menusifu: {
+      portal: [
+        'Sign in to the MenuSifu back office (CMS) as the owner.',
+        'Add a role named “Nomix” that can view reports and nothing else.',
+        'Add a user with that role, for example nomix@yourcompany.com, and give it a password.',
+        'Enter that user here. You can switch it off any time in MenuSifu.'
+      ],
+      reports: [
+        'Sign in to the MenuSifu back office (CMS).',
+        'Open Reports and choose the daily sales, item sales and labor reports.',
+        'Have them sent by email every day to the address below. Use a store’s own address for a single store’s reports.'
+      ]
+    }
+  };
+
   return { GROUPS, KINDS, CUSTOM_KINDS, TOOLS, STREAMS, CATS, TAG_GROUPS, FIELD_WORDS, QUESTIONS, BACKUP_WORDS, COMPANY,
-    DISHES, MENUS, OPTIONS, REASONS, MANAGERS, STAFF, STATIONS, FRIDGES, STOCK, DEALS, PROMOS, COMMENTS, RECIPES, WASTE_REASONS, PROVIDERS, LOGOS };
+    DISHES, MENUS, OPTIONS, REASONS, MANAGERS, STAFF, STATIONS, FRIDGES, STOCK, DEALS, PROMOS, COMMENTS, RECIPES, WASTE_REASONS, PROVIDERS, LOGOS,
+    WAYS, WAY_INFO, WAY_STEPS };
 })();

@@ -108,7 +108,7 @@
       <button type="button" class="x" data-act="stream-close" aria-label="Cancel">${N.icon('x')}</button>
     </div>`;
   }
-  const linked = st => st === 'connected' || st === 'waiting' || st === 'error';
+  const linked = st => ['connected', 'waiting', 'error', 'bridge', 'requested', 'invited'].includes(st);
   function toolActions(id, t, st) {
     if (N.ui.disconnect === id) {
       const stores = N.storesOf(id);
@@ -138,12 +138,21 @@
       body = `<div class="blk"><p>Someone from Nomix will reach out to finish connecting ${esc(t.name)}.</p>
           <p class="meta">Requested ${esc(N.when(r.at))}</p>${r.note ? `<p class="quote">${esc(r.note)}</p>` : ''}</div>
         <div class="blk"><h3>${base.length || extra.length ? 'Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
+    } else if (r.ways && st !== 'connected') {
+      body = `<div class="blk"><h3>${base.length || extra.length ? 'Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
     } else if (N.liveBody && (st === 'waiting' || st === 'error')) {
       body = N.liveBody(id, t, st, r) + `<div class="blk"><h3>${base.length || extra.length ? 'Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
     } else {
       body = `<div class="blk"><h3>${base.length || extra.length ? 'Once connected, Nomix will receive:' : ask}</h3>${streams(true)}${streamAdder(id, t)}</div>`;
     }
-    return body + (N.liveExtra ? N.liveExtra(id, t, st, r) : '') + toolActions(id, t, st);
+    return waysBlock(id, r) + body + (N.liveExtra ? N.liveExtra(id, t, st, r) : '') + toolActions(id, t, st);
+  }
+  // Every way a tool is connected (a login, report emails, Store Bridge, a request, store managers), and adding another.
+  function waysBlock(id, r) {
+    if (!r.ways || !N.wayLines) return '';
+    return `<div class="blk"><h3>How Nomix gets ${esc(N.tool(id).name)} data</h3><ul class="waylist">${N.wayLines(id).map(w =>
+      `<li><span class="dot ${w.ok ? 'ok' : 'help'}"></span><span class="wl-text"><span class="wl-way">${esc(w.way)} · ${esc(w.state)}</span><span class="wl-detail">${esc(w.detail)}</span></span></li>`).join('')}</ul>
+      <button type="button" class="btn-quiet sm edit-only" data-act="way-again" data-id="${esc(id)}">Connect another way or more stores</button></div>`;
   }
   function toolCard(id, store) {
     const t = N.tool(id), st = N.status(id), r = N.S.tools[id] || {}, key = 'tool:' + id, open = N.S.open === key;
@@ -151,7 +160,7 @@
     const status = st === 'connected'
       ? `<span class="dot ok"></span><span>Working · <span data-ts="${last}" data-last="${esc(id)}" data-pre="Updated ">Updated ${N.rel(last)}</span></span>`
       : st === 'help' ? '<span class="dot help"></span><span>We’re setting this up with you</span>'
-      : st === 'waiting' ? '<span class="dot help"></span><span>Waiting for the first report</span>'
+      : ['waiting', 'bridge', 'requested', 'invited'].includes(st) ? `<span class="dot help"></span><span>${esc(N.statusText(st))}</span>`
       : st === 'error' ? '<span class="dot err"></span><span>Needs a new sign-in</span>'
       : '<span class="dot"></span><span>Not connected yet</span>';
     return `<article class="tcard glass" id="tc-${esc(id)}">
@@ -183,7 +192,7 @@
     if (!rows.length) return `<p class="meta fh-empty">${esc(N.waitingText(cat, store))}</p>`;
     return `<div class="fh-scroll"><table class="fh">
       <thead><tr><th scope="col">When</th><th scope="col">Store</th><th scope="col">From</th><th scope="col">Value</th></tr></thead>
-      <tbody>${rows.map(e => `<tr><td data-ts="${e.ts}">${N.rel(e.ts)}</td><td>${esc(N.storeName(e.store))}</td><td>${esc(N.tool(e.tool).name)}</td><td class="fh-v">${esc(e.v)}</td></tr>`).join('')}</tbody>
+      <tbody>${rows.map(e => `<tr><td data-ts="${e.ts}">${N.rel(e.ts)}</td><td>${esc(N.storeName(e.store))}</td><td>${esc(N.tool(e.tool).name)}</td><td class="fh-v">${esc(N.show(cat, field, e.v))}</td></tr>`).join('')}</tbody>
     </table></div>`;
   }
   // Keep an open field's history current as new values arrive.

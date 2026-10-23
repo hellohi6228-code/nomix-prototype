@@ -451,6 +451,32 @@
   N.histFor = (cat, field, store, max) => (((N.S.hist[cat] || {})[field]) || [])
     .filter(e => N.tool(e.tool) && N.inView(e.store, store)).slice(0, max || 5);
   N.typeOf = (cat, field) => { const c = N.cat(cat); return (c && c.types && c.types[field]) || 'Text'; };
+  // Values from the service are typed (money in cents, ISO times in the store's zone, YYYY-MM-DD days,
+  // numbers, true/false; null = not yet). They are written out here. Text values show as they are.
+  const two = n => String(n).padStart(2, '0');
+  const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`; };
+  const dayOf = key => new Date(key + 'T12:00:00Z');
+  N.show = (cat, field, v) => {
+    if (v === null) return 'Not yet';
+    if (v === undefined || v === '') return '—';
+    const t = N.typeOf(cat, field);
+    if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+    if (typeof v === 'number') {
+      if (t === 'Money') return (v < 0 ? '-' : '') + money(Math.abs(v) / 100);
+      if (t === '°F') return `${v}°F`;
+      return v.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    }
+    if (typeof v !== 'string') return String(v);
+    if (t === 'Time') {
+      const m = v.match(/^(?:(\d{4}-\d{2}-\d{2})T)?(\d{2}):(\d{2})(?::\d{2})?(?:[+-]\d{2}:\d{2}|Z)?$/);
+      if (m) {
+        const h = +m[2], clock = `${h % 12 || 12}:${m[3]} ${h < 12 ? 'AM' : 'PM'}`;
+        return m[1] && m[1] !== todayKey() ? `${dayOf(m[1]).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })} ${clock}` : clock;
+      }
+    }
+    if (t === 'Date' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return dayOf(v).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+    return v;
+  };
   N.seedFeed = id => {
     const r = N.S.tools[id], now = Date.now();
     r.feed = [];
@@ -492,7 +518,7 @@
     document.querySelectorAll('[data-fvc]').forEach(el => {
       const [cat, field] = el.dataset.fvc.split('|');
       const e = N.fieldNow(cat, field, store);
-      const v = N.L(e ? e.v : '—'), s = N.L(e ? `${N.tool(e.tool).name} · ${N.storeName(e.store)} · ${N.rel(e.ts)}` : N.waitingText(cat, store));
+      const v = N.L(e ? N.show(cat, field, e.v) : '—'), s = N.L(e ? `${N.tool(e.tool).name} · ${N.storeName(e.store)} · ${N.rel(e.ts)}` : N.waitingText(cat, store));
       const val = el.querySelector('.fvc-v'), src = el.querySelector('.fvc-s');
       if (val.textContent !== v) {
         if (val.textContent && e) { el.classList.remove('fresh'); void el.offsetWidth; el.classList.add('fresh'); }
