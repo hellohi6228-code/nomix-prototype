@@ -62,15 +62,17 @@
            ${on ? `<ul class="nk-ev">${it.evidence.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : ''}`
         : `<div class="nk-row">${row}</div>`}</li>`;
     };
+    // The day's facts sit in the same boxes: the first part bold, the rest underneath.
+    const fact = n => {
+      const [t, ...rest] = n.text.split(' · ');
+      return `<li class="nk-item"><div class="nk-row">${ic(NOTE_ICON[n.key] || 'check', 'nk-ic')}<span class="nk-text">
+        <span class="nk-t">${esc(t)}</span>${rest.length ? `<span class="nk-d">${esc(rest.join(' · '))}</span>` : ''}</span></div></li>`;
+    };
     const act = b.now.concat(b.today);
     return `<div class="panel-head"><h2 class="panel-h">${esc(where(view))}</h2><span class="meta" data-ts="${Date.now()}" data-pre="Updated ">Updated just now</span></div>
-      ${act.length ? `<ul class="nk-list">${act.map(item).join('')}</ul>` : ''}
-      ${b.notes.length ? `<ul class="notes">${b.notes.map(n => `<li>${ic(NOTE_ICON[n.key] || 'check')}<span>${esc(n.text)}</span></li>`).join('')}</ul>` : ''}
-      ${b.missing.length ? missingRow(b.missing) : ''}`;
+      ${act.length || b.notes.length ? `<ul class="nk-list">${act.map(item).join('')}${b.notes.map(fact).join('')}</ul>` : ''}`;
   }
   N.brainHour = h => (h === 12 ? '12 PM' : h > 12 ? `${h - 12} PM` : `${h} AM`);
-  const missingRow = tags => `<div class="nk-miss"><span class="lbl">Not connected</span><span class="nk-tags">${tags.map(t => `<span class="chip static">${esc(B.TAGS[t])}</span>`).join('')}</span>
-      <button type="button" class="btn-quiet sm" data-act="pick-open">Connect a tool</button></div>`;
 
   /* ---------- Dashboard ---------- */
   const usd = c => (c == null ? '—' : '$' + Math.round(c / 100).toLocaleString('en-US'));
@@ -114,9 +116,8 @@
   function dashView(view) {
     const d = B.dash(view), k = d.kpi;
     const first = B.today((N.allStores().find(s => N.inView(s, view))) || N.allStores()[0]), day = first.weekday;
-    const miss = ['staff', 'stock', 'temps', 'apps'].filter(t => !d.has[t]);
     const head = `<div class="panel-head"><h2 class="panel-h">${esc(where(view))}</h2><span class="meta" data-ts="${Date.now()}" data-pre="Updated ">Updated just now</span></div>`;
-    if (!d.has.sales) return head + missingRow(['sales'].concat(miss));
+    if (!d.has.sales) return head;
     const top = `${head}
       <div class="dash-hero"><span class="lbl">Sales today</span><span class="hero-v">${usd(k.net)}</span>${delta(k.net, k.usualNet, day)}</div>
       <div class="ktiles">
@@ -133,7 +134,7 @@
         <td>${usd(r.net)}</td><td>${r.net != null && r.usualNet ? change(r.net, r.usualNet) : '—'}</td>
         <td>${pct(r.laborPct)}</td><td>${r.onShift == null ? '—' : r.onShift}</td><td>${r.alerts ? `<span class="pill warn">${r.alerts}</span>` : ''}</td></tr>`).join('');
       return `${top}<div class="dbox"><h3 class="lbl">Stores</h3><div class="fh-scroll"><table class="fh dtable"><thead><tr><th scope="col">Store</th><th scope="col">Sales today</th><th scope="col">vs usual</th><th scope="col">Labor</th><th scope="col">On shift</th><th scope="col">Needs attention</th></tr></thead><tbody>${rows}</tbody></table></div></div>
-        ${items}${miss.length ? missingRow(miss) : ''}`;
+        ${items}`;
     }
     const shift = d.shift ? `<div class="dbox"><h3 class="lbl">Shift</h3><ul class="dlist">${d.shift.map(x => `<li><span class="dl-n"><span class="dot ${x.state === 'on' ? 'ok' : x.state === 'late' ? 'warn' : ''}"></span>${esc(x.who)} <span class="meta">${esc(x.role)}</span></span>
         <span class="dl-v">${esc(x.state === 'on' ? `In ${x.at} · until ${x.until}` : x.state === 'late' ? `Not in · started ${x.at}` : `Starts ${x.at}`)}</span></li>`).join('')}</ul></div>` : '';
@@ -143,7 +144,7 @@
         <span class="dl-v">${x.f == null ? '—' : `${x.f}°F`}${x.alert ? ` <span class="pill warn">${ic('warn')}Too warm</span>` : ''}</span></li>`).join('')}</ul></div>` : '';
     const apps = d.apps && d.apps.length ? `<div class="dbox"><h3 class="lbl">Delivery apps</h3><ul class="dlist">${d.apps.map(x => `<li><span class="dl-n">${esc(x.app)}</span>
         <span class="dl-v">${x.paused ? `<span class="pill warn">${ic('warn')}Paused</span>` : 'Taking orders'} · ${x.orders} orders</span></li>`).join('')}</ul></div>` : '';
-    return `${top}<div class="dgrid">${shift}${stock}${temps}${apps}${items}</div>${miss.length ? missingRow(miss) : ''}`;
+    return `${top}<div class="dgrid">${shift}${stock}${temps}${apps}${items}</div>`;
   }
   // The chart's hover card: the hour, today and the usual.
   document.addEventListener('pointerover', e => {
