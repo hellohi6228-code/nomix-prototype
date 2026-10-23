@@ -18,9 +18,15 @@
       return chip('brand:' + b.id, `${b.name} · ${n}`, 'b-' + b.id, open === b.id, 'brand');
     }).join('');
     const mine = open ? stores.filter(s => N.brandOf(s) === open) : [];
+    // A brand's stores fold into one chip once a choice is made; tap it to see them again.
+    const one = mine.includes(view);
+    const storesRow = mine.length < 2 ? ''
+      : N.ui.storesOpen ? `<div class="sb-row sb-stores">${mine.map(s => chip(s, N.storeLoc(s), s, view === s)).join('')}
+          <button type="button" class="chip sb-fold" id="st-fold" data-act="stores-fold" aria-expanded="true" aria-label="Hide stores">${N.icon('chev', 'up')}</button></div>`
+      : `<div class="sb-row"><button type="button" class="chip sb-pick" id="st-fold" data-act="stores-fold" aria-expanded="false"${one ? ' aria-pressed="true"' : ''}>${esc(one ? N.storeLoc(view) : 'Choose a store')}${N.icon('chev', 'chev')}</button></div>`;
     return `<div class="storebar" role="group" aria-label="Choose a brand or store">
       <div class="sb-row">${chip('all', `All ${stores.length} stores`, 'all', view === 'all')}${brands}</div>
-      ${mine.length > 1 ? `<div class="sb-row sb-stores">${mine.map(s => chip(s, N.storeLoc(s), s, view === s)).join('')}</div>` : ''}
+      ${storesRow}
     </div>`;
   }
   function header(store) {
@@ -302,7 +308,13 @@
     N.ui.disconnect = null;
   };
   Object.assign(N.acts, {
-    store: (d, el) => { N.S.store = d.id; if (!N.viewing) N.save(); N.render({ refocus: el.id, keepScroll: true }); },
+    store: (d, el) => {
+      N.S.store = d.id; N.ui.storesOpen = false;
+      if (!N.viewing) N.save();
+      N.render({ refocus: el.id, keepScroll: true });
+      if (!document.getElementById(el.id)) { const f = document.getElementById('st-fold'); if (f) f.focus({ preventScroll: true }); }
+    },
+    'stores-fold': () => { N.ui.storesOpen = !N.ui.storesOpen; N.render({ refocus: 'st-fold', keepScroll: true }); },
     // Tap a tool or tag in the diagram to see what it touches; tap it again (or the chip) to show everything.
     focus: (d, el) => { N.ui.focus = N.ui.focus === d.id ? null : d.id; N.render({ refocus: el.id === 'focus-clear' ? null : el.id, keepScroll: true }); },
     'toggle-open': d => {
